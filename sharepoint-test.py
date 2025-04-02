@@ -102,9 +102,57 @@ async def test_sharepoint_login():
             })
             print("Screenshot taken")
             
-            # Get text content to verify successful navigation
+            # Click on "New" button
+            result = await session.call_tool("playwright_click_text", arguments={
+                "text": "New"
+            })
+            print("Click New button result:", result.text if hasattr(result, 'text') else result)
+            
+            # Take a screenshot of the New menu
+            result = await session.call_tool("playwright_screenshot", arguments={
+                "name": "new_menu"
+            })
+            print("Screenshot taken")
+            
+            # Click on PowerPoint presentation
+            result = await session.call_tool("playwright_click_text", arguments={
+                "text": "PowerPoint presentation"
+            })
+            print("Click PowerPoint presentation result:", result.text if hasattr(result, 'text') else result)
+            
+            # Wait for the PowerPoint editor to load
+            # Adding a small delay to ensure the editor loads properly
+            await asyncio.sleep(5)
+            
+            # Take a screenshot of the PowerPoint editor
+            result = await session.call_tool("playwright_screenshot", arguments={
+                "name": "powerpoint_editor"
+            })
+            print("Screenshot taken")
+            
+            # Enter title "ppt agent"
+            # First, we need to click on the title placeholder
+            result = await session.call_tool("playwright_click_text", arguments={
+                "text": "Click to add title"
+            })
+            print("Click title placeholder result:", result.text if hasattr(result, 'text') else result)
+            
+            # Now type the title
+            result = await session.call_tool("playwright_fill", arguments={
+                "selector": "div[aria-label='Title text']",
+                "value": "ppt agent"
+            })
+            print("Enter title result:", result.text if hasattr(result, 'text') else result)
+            
+            # Take a final screenshot of the PowerPoint with title
+            result = await session.call_tool("playwright_screenshot", arguments={
+                "name": "powerpoint_with_title"
+            })
+            print("Screenshot taken")
+            
+            # Get text content to verify successful creation
             result = await session.call_tool("playwright_get_text_content", arguments={})
-            print("SharePoint page content:", result.text if hasattr(result, 'text') else result)
+            print("PowerPoint editor content:", result.text if hasattr(result, 'text') else result)
 
 if __name__ == "__main__":
     asyncio.run(test_sharepoint_login())
