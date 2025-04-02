@@ -119,32 +119,36 @@ async def test_sharepoint_login():
             result = await session.call_tool("playwright_get_text_content", arguments={})
             print("PowerPoint editor content:", result.text if hasattr(result, 'text') else result)
             
-            # Try a simpler JavaScript approach
+            # Try a simpler JavaScript approach with proper function wrapping
             try:
                 result = await session.call_tool("playwright_evaluate", arguments={
                     "script": """
-                    var titleElements = document.querySelectorAll('div.ShapeViewContent');
-                    if (titleElements.length > 0) {
-                        titleElements[0].textContent = 'ppt agent';
-                        return 'Set title using ShapeViewContent';
-                    }
-                    
-                    titleElements = document.querySelectorAll('div.Paragraph.WhiteSpaceCollapse');
-                    if (titleElements.length > 0) {
-                        titleElements[0].textContent = 'ppt agent';
-                        return 'Set title using Paragraph.WhiteSpaceCollapse';
-                    }
-                    
-                    var allElements = document.querySelectorAll('*');
-                    for (var i = 0; i < allElements.length; i++) {
-                        var el = allElements[i];
-                        if (el.textContent && el.textContent.includes('Click to add title')) {
-                            el.textContent = 'ppt agent';
-                            return 'Set title on element with Click to add title text';
+                    function setTitle() {
+                        var titleElements = document.querySelectorAll('div.ShapeViewContent');
+                        if (titleElements.length > 0) {
+                            titleElements[0].textContent = 'ppt agent';
+                            return 'Set title using ShapeViewContent';
                         }
+                        
+                        var paragraphElements = document.querySelectorAll('div.Paragraph.WhiteSpaceCollapse');
+                        if (paragraphElements.length > 0) {
+                            paragraphElements[0].textContent = 'ppt agent';
+                            return 'Set title using Paragraph.WhiteSpaceCollapse';
+                        }
+                        
+                        var allElements = document.querySelectorAll('*');
+                        for (var i = 0; i < allElements.length; i++) {
+                            var el = allElements[i];
+                            if (el.textContent && el.textContent.includes('Click to add title')) {
+                                el.textContent = 'ppt agent';
+                                return 'Set title on element with Click to add title text';
+                            }
+                        }
+                        
+                        return 'Could not find title element';
                     }
                     
-                    return 'Could not find title element';
+                    return setTitle();
                     """
                 })
                 print("JavaScript title result:", result.text if hasattr(result, 'text') else result)
