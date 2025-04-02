@@ -153,7 +153,29 @@ async def test_sharepoint_login():
             result = await session.call_tool("playwright_get_text_content", arguments={})
             print("PowerPoint editor content:", result)
             
-            # Try to find ShapeViewContent
+            # Try to find and click the title element using XPath
+            try:
+                # Try using the full XPath for the "Click to add title" element
+                result = await session.call_tool("playwright_click", arguments={
+                    "selector": "//div[contains(@class, 'ShapeViewContent')]"
+                })
+                print("Click on title XPath result:", get_result_text(result))
+                
+                # Try alternative XPath if needed
+                result = await session.call_tool("playwright_click", arguments={
+                    "selector": "//div[contains(@class, 'Paragraph') and contains(@class, 'WhiteSpaceCollapse')]"
+                })
+                print("Click on alternative title XPath result:", get_result_text(result))
+                
+                # Try to type directly
+                result = await session.call_tool("playwright_type", arguments={
+                    "text": "ppt agent"
+                })
+                print("Type result:", get_result_text(result))
+            except Exception as e:
+                print("Error with XPath clicking:", e)
+            
+            # Try to find ShapeViewContent with JavaScript
             try:
                 result = await session.call_tool("playwright_evaluate", arguments={
                     "script": "document.querySelector('div.ShapeViewContent') ? 'Found ShapeViewContent' : 'Not found'"
