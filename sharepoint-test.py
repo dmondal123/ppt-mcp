@@ -21,7 +21,7 @@ async def test_sharepoint_login():
             
             # Navigate to SharePoint login page
             result = await session.call_tool("playwright_navigate", arguments={
-                "url": "https://www.office.com/"
+                "url": "https://visainc-my.sharepoint.com/"
             })
             print("Navigation result:", result.text if hasattr(result, 'text') else result)
             
@@ -46,7 +46,7 @@ async def test_sharepoint_login():
             # Enter email/username
             result = await session.call_tool("playwright_fill", arguments={
                 "selector": "input[type='email']",
-                "value": "your_email@example.com"  # Replace with actual email
+                "value": "diymonda@visa.com"  # Replace with actual email
             })
             print("Fill email result:", result.text if hasattr(result, 'text') else result)
             
@@ -68,21 +68,6 @@ async def test_sharepoint_login():
                 "value": "your_password"  # Replace with actual password
             })
             print("Fill password result:", result.text if hasattr(result, 'text') else result)
-            
-            # Click Sign in
-            result = await session.call_tool("playwright_click", arguments={
-                "selector": "input[type='submit']"
-            })
-            print("Click sign in result:", result.text if hasattr(result, 'text') else result)
-            
-            # Handle "Stay signed in?" prompt if it appears
-            try:
-                result = await session.call_tool("playwright_click", arguments={
-                    "selector": "input[id='idSIButton9']"  # "Yes" button
-                })
-                print("Clicked 'Stay signed in':", result.text if hasattr(result, 'text') else result)
-            except Exception as e:
-                print("No 'Stay signed in' prompt or error:", e)
             
             # Take a screenshot of the Office home page after login
             result = await session.call_tool("playwright_screenshot", arguments={
@@ -130,29 +115,41 @@ async def test_sharepoint_login():
             })
             print("Screenshot taken")
             
-            # Enter title "ppt agent"
-            # First, we need to click on the title placeholder
-            result = await session.call_tool("playwright_click_text", arguments={
-                "text": "Click to add title"
-            })
-            print("Click title placeholder result:", result.text if hasattr(result, 'text') else result)
-            
-            # Now type the title
-            result = await session.call_tool("playwright_fill", arguments={
-                "selector": "div[aria-label='Title text']",
-                "value": "ppt agent"
-            })
-            print("Enter title result:", result.text if hasattr(result, 'text') else result)
-            
-            # Take a final screenshot of the PowerPoint with title
-            result = await session.call_tool("playwright_screenshot", arguments={
-                "name": "powerpoint_with_title"
-            })
-            print("Screenshot taken")
-            
-            # Get text content to verify successful creation
+            # Get text content to see what's available
             result = await session.call_tool("playwright_get_text_content", arguments={})
             print("PowerPoint editor content:", result.text if hasattr(result, 'text') else result)
+            
+            # Try clicking on the slide area first
+            try:
+                result = await session.call_tool("playwright_click", arguments={
+                    "selector": ".pptx-slide"  # Common class for PowerPoint slide in web view
+                })
+                print("Click slide result:", result.text if hasattr(result, 'text') else result)
+            except Exception as e:
+                print("Error clicking slide:", e)
+            
+            # Try using JavaScript to set the title
+            try:
+                result = await session.call_tool("playwright_evaluate", arguments={
+                    "script": """
+                    // Try to find title placeholder and set text
+                    const titleElements = Array.from(document.querySelectorAll('[aria-label*="title"], [placeholder*="title"], [data-automation-id*="title"]'));
+                    if (titleElements.length > 0) {
+                        titleElements[0].textContent = "ppt agent";
+                        return "Title set via JavaScript";
+                    }
+                    return "No title element found";
+                    """
+                })
+                print("JavaScript title result:", result.text if hasattr(result, 'text') else result)
+            except Exception as e:
+                print("Error with JavaScript:", e)
+            
+            # Take a final screenshot
+            result = await session.call_tool("playwright_screenshot", arguments={
+                "name": "powerpoint_final"
+            })
+            print("Final screenshot taken")
 
 if __name__ == "__main__":
     asyncio.run(test_sharepoint_login())
