@@ -153,61 +153,46 @@ async def test_sharepoint_login():
             result = await session.call_tool("playwright_get_text_content", arguments={})
             print("PowerPoint editor content:", result)
             
-            # Try to find and click the title element using XPath
+            # Try using playwright_fill with different selectors
             try:
-                # Try using the full XPath for the "Click to add title" element
-                result = await session.call_tool("playwright_click", arguments={
-                    "selector": "//div[contains(@class, 'ShapeViewContent')]"
+                # Try with div.ShapeViewContent
+                result = await session.call_tool("playwright_fill", arguments={
+                    "selector": "div.ShapeViewContent",
+                    "value": "ppt agent"
                 })
-                print("Click on title XPath result:", get_result_text(result))
-                
-                # Try alternative XPath if needed
-                result = await session.call_tool("playwright_click", arguments={
-                    "selector": "//div[contains(@class, 'Paragraph') and contains(@class, 'WhiteSpaceCollapse')]"
-                })
-                print("Click on alternative title XPath result:", get_result_text(result))
-                
-                # Try to type directly
-                result = await session.call_tool("playwright_type", arguments={
-                    "text": "ppt agent"
-                })
-                print("Type result:", get_result_text(result))
+                print("Fill ShapeViewContent result:", get_result_text(result))
             except Exception as e:
-                print("Error with XPath clicking:", e)
-            
-            # Try to find ShapeViewContent with JavaScript
-            try:
-                result = await session.call_tool("playwright_evaluate", arguments={
-                    "script": "document.querySelector('div.ShapeViewContent') ? 'Found ShapeViewContent' : 'Not found'"
-                })
-                result_text = get_result_text(result)
-                print("ShapeViewContent check:", result)
+                print("Error filling ShapeViewContent:", e)
                 
-                if "Found" in result_text:
-                    # Try to set text content
-                    result = await session.call_tool("playwright_evaluate", arguments={
-                        "script": "document.querySelector('div.ShapeViewContent').textContent = 'ppt agent'; 'Text set'"
+                try:
+                    # Try with div.Paragraph.WhiteSpaceCollapse
+                    result = await session.call_tool("playwright_fill", arguments={
+                        "selector": "div.Paragraph.WhiteSpaceCollapse",
+                        "value": "ppt agent"
                     })
-                    print("Set ShapeViewContent text:", get_result_text(result))
-            except Exception as e:
-                print("Error with ShapeViewContent:", e)
-            
-            # Try to find Paragraph.WhiteSpaceCollapse
-            try:
-                result = await session.call_tool("playwright_evaluate", arguments={
-                    "script": "document.querySelector('div.Paragraph.WhiteSpaceCollapse') ? 'Found Paragraph.WhiteSpaceCollapse' : 'Not found'"
-                })
-                result_text = get_result_text(result)
-                print("Paragraph.WhiteSpaceCollapse check:", result)
-                
-                if "Found" in result_text:
-                    # Try to set text content
-                    result = await session.call_tool("playwright_evaluate", arguments={
-                        "script": "document.querySelector('div.Paragraph.WhiteSpaceCollapse').textContent = 'ppt agent'; 'Text set'"
-                    })
-                    print("Set Paragraph.WhiteSpaceCollapse text:", get_result_text(result))
-            except Exception as e:
-                print("Error with Paragraph.WhiteSpaceCollapse:", e)
+                    print("Fill Paragraph.WhiteSpaceCollapse result:", get_result_text(result))
+                except Exception as e:
+                    print("Error filling Paragraph.WhiteSpaceCollapse:", e)
+                    
+                    try:
+                        # Try with XPath
+                        result = await session.call_tool("playwright_fill", arguments={
+                            "selector": "//div[contains(@class, 'ShapeViewContent')]",
+                            "value": "ppt agent"
+                        })
+                        print("Fill XPath result:", get_result_text(result))
+                    except Exception as e:
+                        print("Error filling with XPath:", e)
+                        
+                        try:
+                            # Try with a more general selector
+                            result = await session.call_tool("playwright_fill", arguments={
+                                "selector": "[contenteditable='true']",
+                                "value": "ppt agent"
+                            })
+                            print("Fill contenteditable result:", get_result_text(result))
+                        except Exception as e:
+                            print("Error filling contenteditable:", e)
             
             # Take a final screenshot
             result = await session.call_tool("playwright_screenshot", arguments={
