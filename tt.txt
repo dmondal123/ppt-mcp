@@ -1,0 +1,39 @@
+Connecting to http://localhost:9222...
+Fetching initial page to get session ID...
+Response status: 200
+Response chunk: event: endpoint
+data: /sse?sessionId=9800ae10-3283-497f-ab67-6b3af2635625
+
+
+Using session ID: 9800ae10-3283-497f-ab67-6b3af2635625
+Initializing browser context...
+Trying to send command to http://localhost:9222/jsonrpc?sessionId=9800ae10-3283-497f-ab67-6b3af2635625: initialize
+Response status: 202
+Command accepted (202 status)
+Initialize result: {'status': 'accepted'}
+Navigating to website...
+Trying to send command to http://localhost:9222/jsonrpc?sessionId=9800ae10-3283-497f-ab67-6b3af2635625: browser.goto
+Response status: 202
+Command accepted (202 status)
+Navigation result: {'status': 'accepted'}
+Clicking login link...
+Trying to send command to http://localhost:9222/jsonrpc?sessionId=9800ae10-3283-497f-ab67-6b3af2635625: page.clickText
+Response status: 202
+Command accepted (202 status)
+Click result: {'status': 'accepted'}
+Filling username...
+Trying to send command to http://localhost:9222/jsonrpc?sessionId=9800ae10-3283-497f-ab67-6b3af2635625: page.fill
+Response status: 202
+Command accepted (202 status)
+Username fill result: {'status': 'accepted'}
+Filling password...
+Trying to send command to http://localhost:9222/jsonrpc?sessionId=9800ae10-3283-497f-ab67-6b3af2635625: page.fill
+Response status: 202
+Command accepted (202 status)
+Password fill result: {'status': 'accepted'}
+Clicking login button...
+Trying to send command to http://localhost:9222/jsonrpc?sessionId=9800ae10-3283-497f-ab67-6b3af2635625: page.click
+Response status: 202
+Command accepted (202 status)
+Login button click result: {'status': 'accepted'}
+Login completed successfully
