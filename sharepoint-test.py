@@ -23,7 +23,7 @@ async def test_sharepoint_login():
             result = await session.call_tool("playwright_navigate", arguments={
                 "url": "https://visainc-my.sharepoint.com/"
             })
-            print("Navigation result:", result.text if hasattr(result, 'text') else result)
+            print("Navigation result:", get_result_text(result))
             
             # Take a screenshot of the initial page
             result = await session.call_tool("playwright_screenshot", arguments={
@@ -35,7 +35,7 @@ async def test_sharepoint_login():
             result = await session.call_tool("playwright_click_text", arguments={
                 "text": "Sign in"
             })
-            print("Click sign in result:", result.text if hasattr(result, 'text') else result)
+            print("Click sign in result:", get_result_text(result))
             
             # Take a screenshot of the login page
             result = await session.call_tool("playwright_screenshot", arguments={
@@ -48,13 +48,13 @@ async def test_sharepoint_login():
                 "selector": "input[type='email']",
                 "value": "diymonda@visa.com"  # Replace with actual email
             })
-            print("Fill email result:", result.text if hasattr(result, 'text') else result)
+            print("Fill email result:", get_result_text(result))
             
             # Click Next
             result = await session.call_tool("playwright_click", arguments={
                 "selector": "input[type='submit']"
             })
-            print("Click next result:", result.text if hasattr(result, 'text') else result)
+            print("Click next result:", get_result_text(result))
             
             # Take a screenshot of the password page
             result = await session.call_tool("playwright_screenshot", arguments={
@@ -67,7 +67,7 @@ async def test_sharepoint_login():
                 "selector": "input[type='password']",
                 "value": "your_password"  # Replace with actual password
             })
-            print("Fill password result:", result.text if hasattr(result, 'text') else result)
+            print("Fill password result:", get_result_text(result))
             
             # Take a screenshot of the Office home page after login
             result = await session.call_tool("playwright_screenshot", arguments={
@@ -79,7 +79,7 @@ async def test_sharepoint_login():
             result = await session.call_tool("playwright_click_text", arguments={
                 "text": "SharePoint"
             })
-            print("Navigate to SharePoint result:", result.text if hasattr(result, 'text') else result)
+            print("Navigate to SharePoint result:", get_result_text(result))
             
             # Take a screenshot of SharePoint
             result = await session.call_tool("playwright_screenshot", arguments={
@@ -91,7 +91,7 @@ async def test_sharepoint_login():
             result = await session.call_tool("playwright_click_text", arguments={
                 "text": "New"
             })
-            print("Click New button result:", result.text if hasattr(result, 'text') else result)
+            print("Click New button result:", get_result_text(result))
             
             # Take a screenshot of the New menu
             result = await session.call_tool("playwright_screenshot", arguments={
@@ -103,13 +103,13 @@ async def test_sharepoint_login():
             result = await session.call_tool("playwright_evaluate", arguments={
                 "script": "window.initialUrl = window.location.href; 'Stored initial URL'"
             })
-            print("Stored initial URL:", result.text if hasattr(result, 'text') else result)
+            print("Stored initial URL:", result)
             
             # Click on PowerPoint presentation
             result = await session.call_tool("playwright_click_text", arguments={
                 "text": "PowerPoint presentation"
             })
-            print("Click PowerPoint presentation result:", result.text if hasattr(result, 'text') else result)
+            print("Click PowerPoint presentation result:", get_result_text(result))
             
             # Wait for the PowerPoint editor to load
             # Adding a small delay to ensure the editor loads properly
@@ -119,27 +119,29 @@ async def test_sharepoint_login():
             result = await session.call_tool("playwright_evaluate", arguments={
                 "script": "window.location.href === window.initialUrl ? 'Same page' : 'New page'"
             })
-            print("Page check:", result.text if hasattr(result, 'text') else result)
+            result_text = get_result_text(result)
+            print("Page check:", result)
+            print("Page result:", result_text)
             
             # Switch to the new tab if we're still on the same page
-            if "Same page" in result.text:
+            if "Same page" in result_text:
                 # List all pages/tabs
                 result = await session.call_tool("playwright_evaluate", arguments={
                     "script": "window.open('about:blank', '_blank'); 'Opened new tab'"
                 })
-                print("Open new tab result:", result.text if hasattr(result, 'text') else result)
+                print("Open new tab result:", get_result_text(result))
                 
                 # Switch to the new tab
                 result = await session.call_tool("playwright_switch_tab", arguments={
                     "index": 1  # Switch to the second tab (index 1)
                 })
-                print("Switch tab result:", result.text if hasattr(result, 'text') else result)
+                print("Switch tab result:", get_result_text(result))
                 
                 # Navigate directly to the PowerPoint editor URL
                 result = await session.call_tool("playwright_navigate", arguments={
                     "url": "https://visainc-my.sharepoint.com/personal/diymonda_visa_com/_layouts/15/Doc.aspx?sourcedoc={}&action=edit"
                 })
-                print("Direct navigation result:", result.text if hasattr(result, 'text') else result)
+                print("Direct navigation result:", get_result_text(result))
             
             # Take a screenshot of the PowerPoint editor
             result = await session.call_tool("playwright_screenshot", arguments={
@@ -149,21 +151,22 @@ async def test_sharepoint_login():
             
             # Get text content to see what's available
             result = await session.call_tool("playwright_get_text_content", arguments={})
-            print("PowerPoint editor content:", result.text if hasattr(result, 'text') else result)
+            print("PowerPoint editor content:", result)
             
             # Try to find ShapeViewContent
             try:
                 result = await session.call_tool("playwright_evaluate", arguments={
                     "script": "document.querySelector('div.ShapeViewContent') ? 'Found ShapeViewContent' : 'Not found'"
                 })
-                print("ShapeViewContent check:", result.text if hasattr(result, 'text') else result)
+                result_text = get_result_text(result)
+                print("ShapeViewContent check:", result)
                 
-                if "Found" in result.text:
+                if "Found" in result_text:
                     # Try to set text content
                     result = await session.call_tool("playwright_evaluate", arguments={
                         "script": "document.querySelector('div.ShapeViewContent').textContent = 'ppt agent'; 'Text set'"
                     })
-                    print("Set ShapeViewContent text:", result.text if hasattr(result, 'text') else result)
+                    print("Set ShapeViewContent text:", get_result_text(result))
             except Exception as e:
                 print("Error with ShapeViewContent:", e)
             
@@ -172,14 +175,15 @@ async def test_sharepoint_login():
                 result = await session.call_tool("playwright_evaluate", arguments={
                     "script": "document.querySelector('div.Paragraph.WhiteSpaceCollapse') ? 'Found Paragraph.WhiteSpaceCollapse' : 'Not found'"
                 })
-                print("Paragraph.WhiteSpaceCollapse check:", result.text if hasattr(result, 'text') else result)
+                result_text = get_result_text(result)
+                print("Paragraph.WhiteSpaceCollapse check:", result)
                 
-                if "Found" in result.text:
+                if "Found" in result_text:
                     # Try to set text content
                     result = await session.call_tool("playwright_evaluate", arguments={
                         "script": "document.querySelector('div.Paragraph.WhiteSpaceCollapse').textContent = 'ppt agent'; 'Text set'"
                     })
-                    print("Set Paragraph.WhiteSpaceCollapse text:", result.text if hasattr(result, 'text') else result)
+                    print("Set Paragraph.WhiteSpaceCollapse text:", get_result_text(result))
             except Exception as e:
                 print("Error with Paragraph.WhiteSpaceCollapse:", e)
             
@@ -188,6 +192,17 @@ async def test_sharepoint_login():
                 "name": "powerpoint_final"
             })
             print("Final screenshot taken")
+
+def get_result_text(result):
+    """Helper function to safely extract text from result objects"""
+    try:
+        if hasattr(result, 'content') and result.content:
+            for content in result.content:
+                if hasattr(content, 'text'):
+                    return content.text
+        return str(result)
+    except Exception as e:
+        return f"Error extracting text: {e}"
 
 if __name__ == "__main__":
     asyncio.run(test_sharepoint_login())
