@@ -119,52 +119,35 @@ async def test_sharepoint_login():
             result = await session.call_tool("playwright_get_text_content", arguments={})
             print("PowerPoint editor content:", result.text if hasattr(result, 'text') else result)
             
-            # Try to click on any visible element that might be the title
+            # Try a simpler JavaScript approach
             try:
                 result = await session.call_tool("playwright_evaluate", arguments={
                     "script": """
-                    function findAndClickTitle() {
-                        // Try different selectors that might be the title
-                        const selectors = [
-                            'div.ShapeViewContent',
-                            'div.Paragraph.WhiteSpaceCollapse',
-                            '[aria-label*="title"]',
-                            '[placeholder*="title"]',
-                            '[contenteditable="true"]',
-                            '.title-placeholder',
-                            '.pptx-slide-title'
-                        ];
-                        
-                        for (const selector of selectors) {
-                            const elements = document.querySelectorAll(selector);
-                            for (const element of elements) {
-                                if (element.offsetWidth > 0 && element.offsetHeight > 0) {
-                                    // Element is visible, try to click it
-                                    element.click();
-                                    // Try to set text content
-                                    element.textContent = 'ppt agent';
-                                    return `Clicked and set text on ${selector}`;
-                                }
-                            }
-                        }
-                        
-                        // If no specific title element found, try to find any element with "Click to add title" text
-                        const allElements = document.querySelectorAll('*');
-                        for (const element of allElements) {
-                            if (element.textContent && element.textContent.includes('Click to add title')) {
-                                element.click();
-                                element.textContent = 'ppt agent';
-                                return 'Clicked and set text on element with "Click to add title" text';
-                            }
-                        }
-                        
-                        return 'No suitable title element found';
+                    var titleElements = document.querySelectorAll('div.ShapeViewContent');
+                    if (titleElements.length > 0) {
+                        titleElements[0].textContent = 'ppt agent';
+                        return 'Set title using ShapeViewContent';
                     }
                     
-                    return findAndClickTitle();
+                    titleElements = document.querySelectorAll('div.Paragraph.WhiteSpaceCollapse');
+                    if (titleElements.length > 0) {
+                        titleElements[0].textContent = 'ppt agent';
+                        return 'Set title using Paragraph.WhiteSpaceCollapse';
+                    }
+                    
+                    var allElements = document.querySelectorAll('*');
+                    for (var i = 0; i < allElements.length; i++) {
+                        var el = allElements[i];
+                        if (el.textContent && el.textContent.includes('Click to add title')) {
+                            el.textContent = 'ppt agent';
+                            return 'Set title on element with Click to add title text';
+                        }
+                    }
+                    
+                    return 'Could not find title element';
                     """
                 })
-                print("Find, click and set title result:", result.text if hasattr(result, 'text') else result)
+                print("JavaScript title result:", result.text if hasattr(result, 'text') else result)
             except Exception as e:
                 print("Error with JavaScript:", e)
             
