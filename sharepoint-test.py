@@ -119,26 +119,69 @@ async def test_sharepoint_login():
             result = await session.call_tool("playwright_get_text_content", arguments={})
             print("PowerPoint editor content:", result.text if hasattr(result, 'text') else result)
             
-            # Try clicking on the slide area first
+            # Try to click on "Click to add title" text first
             try:
-                result = await session.call_tool("playwright_click", arguments={
-                    "selector": ".pptx-slide"  # Common class for PowerPoint slide in web view
+                result = await session.call_tool("playwright_click_text", arguments={
+                    "text": "Click to add title"
                 })
-                print("Click slide result:", result.text if hasattr(result, 'text') else result)
+                print("Click title placeholder result:", result.text if hasattr(result, 'text') else result)
+                
+                # Wait a moment for the editor to focus
+                await asyncio.sleep(1)
+                
+                # Try to type directly
+                result = await session.call_tool("playwright_evaluate", arguments={
+                    "script": """
+                    // Simulate typing "ppt agent"
+                    document.execCommand('insertText', false, 'ppt agent');
+                    return "Text inserted via execCommand";
+                    """
+                })
+                print("Direct typing result:", result.text if hasattr(result, 'text') else result)
             except Exception as e:
-                print("Error clicking slide:", e)
+                print("Error clicking title placeholder:", e)
             
-            # Try using JavaScript to set the title
+            # Try using JavaScript to set the title specifically targeting NormalTextRun
             try:
                 result = await session.call_tool("playwright_evaluate", arguments={
                     "script": """
-                    // Try to find title placeholder and set text
-                    const titleElements = Array.from(document.querySelectorAll('[aria-label*="title"], [placeholder*="title"], [data-automation-id*="title"]'));
-                    if (titleElements.length > 0) {
-                        titleElements[0].textContent = "ppt agent";
-                        return "Title set via JavaScript";
+                    // Try to find and modify the NormalTextRun span
+                    const normalTextRuns = document.querySelectorAll('.NormalTextRun');
+                    if (normalTextRuns.length > 0) {
+                        // Find the parent container that might be the title
+                        let titleContainer = normalTextRuns[0];
+                        let parent = normalTextRuns[0].parentElement;
+                        
+                        // Go up a few levels to find a suitable container
+                        for (let i = 0; i < 5; i++) {
+                            if (parent && (
+                                parent.getAttribute('aria-label')?.includes('title') || 
+                                parent.className?.includes('title') ||
+                                parent.role === 'heading'
+                            )) {
+                                titleContainer = parent;
+                                break;
+                            }
+                            if (parent) parent = parent.parentElement;
+                        }
+                        
+                        // Set the text content
+                        titleContainer.textContent = 'ppt agent';
+                        return "Title set via NormalTextRun";
                     }
-                    return "No title element found";
+                    
+                    // If no NormalTextRun found, try to find the title placeholder
+                    const titlePlaceholders = Array.from(document.querySelectorAll('*')).filter(el => 
+                        el.textContent?.includes('Click to add title') || 
+                        el.getAttribute('aria-label')?.includes('title')
+                    );
+                    
+                    if (titlePlaceholders.length > 0) {
+                        titlePlaceholders[0].textContent = 'ppt agent';
+                        return "Title set via placeholder";
+                    }
+                    
+                    return "No NormalTextRun or title placeholder found";
                     """
                 })
                 print("JavaScript title result:", result.text if hasattr(result, 'text') else result)
