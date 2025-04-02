@@ -119,41 +119,23 @@ async def test_sharepoint_login():
             result = await session.call_tool("playwright_get_text_content", arguments={})
             print("PowerPoint editor content:", result.text if hasattr(result, 'text') else result)
             
-            # Try a simpler JavaScript approach with proper function wrapping
+            # Try the simplest possible JavaScript approach
             try:
                 result = await session.call_tool("playwright_evaluate", arguments={
-                    "script": """
-                    function setTitle() {
-                        var titleElements = document.querySelectorAll('div.ShapeViewContent');
-                        if (titleElements.length > 0) {
-                            titleElements[0].textContent = 'ppt agent';
-                            return 'Set title using ShapeViewContent';
-                        }
-                        
-                        var paragraphElements = document.querySelectorAll('div.Paragraph.WhiteSpaceCollapse');
-                        if (paragraphElements.length > 0) {
-                            paragraphElements[0].textContent = 'ppt agent';
-                            return 'Set title using Paragraph.WhiteSpaceCollapse';
-                        }
-                        
-                        var allElements = document.querySelectorAll('*');
-                        for (var i = 0; i < allElements.length; i++) {
-                            var el = allElements[i];
-                            if (el.textContent && el.textContent.includes('Click to add title')) {
-                                el.textContent = 'ppt agent';
-                                return 'Set title on element with Click to add title text';
-                            }
-                        }
-                        
-                        return 'Could not find title element';
-                    }
-                    
-                    return setTitle();
-                    """
+                    "script": "document.querySelector('div.ShapeViewContent').textContent = 'ppt agent'; return 'Title set';"
                 })
                 print("JavaScript title result:", result.text if hasattr(result, 'text') else result)
             except Exception as e:
                 print("Error with JavaScript:", e)
+                
+                # Try an alternative selector if the first one fails
+                try:
+                    result = await session.call_tool("playwright_evaluate", arguments={
+                        "script": "document.querySelector('div.Paragraph.WhiteSpaceCollapse').textContent = 'ppt agent'; return 'Title set';"
+                    })
+                    print("Alternative JavaScript title result:", result.text if hasattr(result, 'text') else result)
+                except Exception as e:
+                    print("Error with alternative JavaScript:", e)
             
             # Take a final screenshot
             result = await session.call_tool("playwright_screenshot", arguments={
