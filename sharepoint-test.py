@@ -119,31 +119,54 @@ async def test_sharepoint_login():
             result = await session.call_tool("playwright_get_text_content", arguments={})
             print("PowerPoint editor content:", result.text if hasattr(result, 'text') else result)
             
-            # Click on the div with class "Paragraph WhiteSpaceCollapse"
+            # Try to click on any visible element that might be the title
             try:
-                result = await session.call_tool("playwright_click", arguments={
-                    "selector": "div.Paragraph.WhiteSpaceCollapse"
-                })
-                print("Click on Paragraph WhiteSpaceCollapse result:", result.text if hasattr(result, 'text') else result)
-                
-                # Wait a moment for the editor to focus
-                await asyncio.sleep(1)
-                
-                # Try to type directly using keyboard
                 result = await session.call_tool("playwright_evaluate", arguments={
                     "script": """
-                    // Set text content directly to the paragraph element
-                    const paragraphs = document.querySelectorAll('div.Paragraph.WhiteSpaceCollapse');
-                    if (paragraphs.length > 0) {
-                        paragraphs[0].textContent = 'ppt agent';
-                        return "Text set to Paragraph WhiteSpaceCollapse";
+                    function findAndClickTitle() {
+                        // Try different selectors that might be the title
+                        const selectors = [
+                            'div.ShapeViewContent',
+                            'div.Paragraph.WhiteSpaceCollapse',
+                            '[aria-label*="title"]',
+                            '[placeholder*="title"]',
+                            '[contenteditable="true"]',
+                            '.title-placeholder',
+                            '.pptx-slide-title'
+                        ];
+                        
+                        for (const selector of selectors) {
+                            const elements = document.querySelectorAll(selector);
+                            for (const element of elements) {
+                                if (element.offsetWidth > 0 && element.offsetHeight > 0) {
+                                    // Element is visible, try to click it
+                                    element.click();
+                                    // Try to set text content
+                                    element.textContent = 'ppt agent';
+                                    return `Clicked and set text on ${selector}`;
+                                }
+                            }
+                        }
+                        
+                        // If no specific title element found, try to find any element with "Click to add title" text
+                        const allElements = document.querySelectorAll('*');
+                        for (const element of allElements) {
+                            if (element.textContent && element.textContent.includes('Click to add title')) {
+                                element.click();
+                                element.textContent = 'ppt agent';
+                                return 'Clicked and set text on element with "Click to add title" text';
+                            }
+                        }
+                        
+                        return 'No suitable title element found';
                     }
-                    return "No Paragraph WhiteSpaceCollapse found";
+                    
+                    return findAndClickTitle();
                     """
                 })
-                print("Set text result:", result.text if hasattr(result, 'text') else result)
+                print("Find, click and set title result:", result.text if hasattr(result, 'text') else result)
             except Exception as e:
-                print("Error with Paragraph WhiteSpaceCollapse:", e)
+                print("Error with JavaScript:", e)
             
             # Take a final screenshot
             result = await session.call_tool("playwright_screenshot", arguments={
