@@ -165,18 +165,35 @@ def update_page_after_click(func):
         session_id = list(self._sessions.keys())[-1]
         page = self._sessions[session_id]["page"]
         
-        new_page_future = asyncio.ensure_future(page.context.wait_for_event("page", timeout=3000))
+        # Store the current pages before the click
+        context = page.context
+        pages_before = context.pages
+        
+        # Set up future for new page event
+        new_page_future = asyncio.ensure_future(context.wait_for_event("page", timeout=3000))
         
         result = await func(self, name, arguments)
+        
         try:
+            # Try to get the new page from the event
             new_page = await new_page_future
             await new_page.wait_for_load_state()
             self._sessions[session_id]["page"] = new_page
         except:
-            pass
-            # if page.url != self._sessions[session_id]["page"].url:
-            #     await page.wait_for_load_state()
-            #     self._sessions[session_id]["page"] = page
+            # If that fails, check if there are any new pages
+            pages_after = context.pages
+            new_pages = [p for p in pages_after if p not in pages_before]
+            
+            if new_pages:
+                # Use the last new page
+                new_page = new_pages[-1]
+                await new_page.wait_for_load_state()
+                self._sessions[session_id]["page"] = new_page
+            else:
+                # If no new pages, check if the URL changed
+                if page.url != self._sessions[session_id]["page"].url:
+                    await page.wait_for_load_state()
+                    self._sessions[session_id]["page"] = page
         
         return result
     return wrapper
