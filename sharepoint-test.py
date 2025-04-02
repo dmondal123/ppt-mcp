@@ -119,74 +119,31 @@ async def test_sharepoint_login():
             result = await session.call_tool("playwright_get_text_content", arguments={})
             print("PowerPoint editor content:", result.text if hasattr(result, 'text') else result)
             
-            # Try to click on "Click to add title" text first
+            # Click on the div with class "Paragraph WhiteSpaceCollapse"
             try:
-                result = await session.call_tool("playwright_click_text", arguments={
-                    "text": "Click to add title"
+                result = await session.call_tool("playwright_click", arguments={
+                    "selector": "div.Paragraph.WhiteSpaceCollapse"
                 })
-                print("Click title placeholder result:", result.text if hasattr(result, 'text') else result)
+                print("Click on Paragraph WhiteSpaceCollapse result:", result.text if hasattr(result, 'text') else result)
                 
                 # Wait a moment for the editor to focus
                 await asyncio.sleep(1)
                 
-                # Try to type directly
+                # Try to type directly using keyboard
                 result = await session.call_tool("playwright_evaluate", arguments={
                     "script": """
-                    // Simulate typing "ppt agent"
-                    document.execCommand('insertText', false, 'ppt agent');
-                    return "Text inserted via execCommand";
+                    // Set text content directly to the paragraph element
+                    const paragraphs = document.querySelectorAll('div.Paragraph.WhiteSpaceCollapse');
+                    if (paragraphs.length > 0) {
+                        paragraphs[0].textContent = 'ppt agent';
+                        return "Text set to Paragraph WhiteSpaceCollapse";
+                    }
+                    return "No Paragraph WhiteSpaceCollapse found";
                     """
                 })
-                print("Direct typing result:", result.text if hasattr(result, 'text') else result)
+                print("Set text result:", result.text if hasattr(result, 'text') else result)
             except Exception as e:
-                print("Error clicking title placeholder:", e)
-            
-            # Try using JavaScript to set the title specifically targeting NormalTextRun
-            try:
-                result = await session.call_tool("playwright_evaluate", arguments={
-                    "script": """
-                    // Try to find and modify the NormalTextRun span
-                    const normalTextRuns = document.querySelectorAll('.NormalTextRun');
-                    if (normalTextRuns.length > 0) {
-                        // Find the parent container that might be the title
-                        let titleContainer = normalTextRuns[0];
-                        let parent = normalTextRuns[0].parentElement;
-                        
-                        // Go up a few levels to find a suitable container
-                        for (let i = 0; i < 5; i++) {
-                            if (parent && (
-                                parent.getAttribute('aria-label')?.includes('title') || 
-                                parent.className?.includes('title') ||
-                                parent.role === 'heading'
-                            )) {
-                                titleContainer = parent;
-                                break;
-                            }
-                            if (parent) parent = parent.parentElement;
-                        }
-                        
-                        // Set the text content
-                        titleContainer.textContent = 'ppt agent';
-                        return "Title set via NormalTextRun";
-                    }
-                    
-                    // If no NormalTextRun found, try to find the title placeholder
-                    const titlePlaceholders = Array.from(document.querySelectorAll('*')).filter(el => 
-                        el.textContent?.includes('Click to add title') || 
-                        el.getAttribute('aria-label')?.includes('title')
-                    );
-                    
-                    if (titlePlaceholders.length > 0) {
-                        titlePlaceholders[0].textContent = 'ppt agent';
-                        return "Title set via placeholder";
-                    }
-                    
-                    return "No NormalTextRun or title placeholder found";
-                    """
-                })
-                print("JavaScript title result:", result.text if hasattr(result, 'text') else result)
-            except Exception as e:
-                print("Error with JavaScript:", e)
+                print("Error with Paragraph WhiteSpaceCollapse:", e)
             
             # Take a final screenshot
             result = await session.call_tool("playwright_screenshot", arguments={
