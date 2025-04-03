@@ -66,92 +66,44 @@ async def test_sharepoint_login():
                 "text": "PowerPoint presentation"
             })
             print("Click PowerPoint presentation result:", result.text if hasattr(result, 'text') else result)
+            
             #Wait for the PowerPoint editor to load
             #Adding a small delay to ensure the editor loads properly
-            await asyncio.sleep(1)
+            await asyncio.sleep(5)  # Increased delay to ensure editor fully loads
+            
+            #Click on "Insert" tab in the ribbon
+            try:
+                result = await session.call_tool("playwright_click_text", arguments={
+                    "text": "Insert"
+                })
+                print("Click on Insert tab result:", result.text if hasattr(result, 'text') else result)
+                
+                #Click on "New Slide" button
+                result = await session.call_tool("playwright_click_text", arguments={
+                    "text": "New Slide"
+                })
+                print("Click on New Slide result:", result.text if hasattr(result, 'text') else result)
+                
+                #Take a screenshot after adding new slide
+                result = await session.call_tool("playwright_screenshot", arguments={
+                    "name": "new_slide_added"
+                })
+                print("New slide screenshot taken")
+            except Exception as e:
+                print("Error adding new slide:", e)
+            
             #Try to click on "Click to add title" text first
             try:
-                # First try to click on the element
-                click_result = await session.call_tool("playwright_click", arguments={
-                    "selector": "span.NormalTextRun"
+                result = await session.call_tool("playwright_fill", arguments={
+                "selector": "span.NormalTextRun",
+                "value": "ppt agent"
                 })
-                print("Click on span.NormalTextRun result:", click_result.text(click_result))
-                
-                # Try to fill it after clicking
-                fill_result = await session.call_tool("playwright_fill", arguments={
-                    "selector": "span.NormalTextRun",
-                    "value": "ppt agent"
-                })
-                print("Fill title result:", fill_result.text(fill_result))
-                
-                # If direct fill doesn't work, try typing after clicking
-                type_result = await session.call_tool("playwright_type", arguments={
-                    "text": "ppt agent via keyboard"
-                })
-                print("Keyboard type result:", type_result.text(type_result))
-                
-                # Try clicking on parent elements
-                parent_selectors = [
-                    "div.title-placeholder",
-                    "div.slide-title",
-                    "[contenteditable='true']",
-                    "[role='textbox']"
-                ]
-                
-                for selector in parent_selectors:
-                    try:
-                        parent_click = await session.call_tool("playwright_click", arguments={
-                            "selector": selector
-                        })
-                        print(f"Click on {selector} result:", parent_click.text(parent_click))
-                        
-                        parent_type = await session.call_tool("playwright_type", arguments={
-                            "text": f"ppt agent via {selector}"
-                        })
-                        print(f"Type in {selector} result:", parent_type.text(parent_type))
-                        
-                        # Take a screenshot after each attempt
-                        screenshot = await session.call_tool("playwright_screenshot", arguments={
-                            "name": f"after_{selector.replace('[', '').replace(']', '').replace('=', '_').replace('\'', '')}"
-                        })
-                        print(f"Screenshot taken after {selector}")
-                    except Exception as e:
-                        print(f"Error with {selector}:", e)
-                
-                # Try clicking at different positions on the slide
-                positions = [
-                    {"x": 400, "y": 150},  # Top center
-                    {"x": 400, "y": 200},  # Upper center
-                    {"x": 400, "y": 250}   # Middle center
-                ]
-                
-                for i, pos in enumerate(positions):
-                    try:
-                        position_click = await session.call_tool("playwright_mouse_click", arguments={
-                            "x": pos["x"],
-                            "y": pos["y"]
-                        })
-                        print(f"Click at position ({pos['x']}, {pos['y']}) result:", position_click.text(position_click))
-                        
-                        position_type = await session.call_tool("playwright_type", arguments={
-                            "text": f"ppt agent at position {i+1}"
-                        })
-                        print(f"Type at position {i+1} result:", position_type.text(position_type))
-                        
-                        # Take a screenshot after each position attempt
-                        screenshot = await session.call_tool("playwright_screenshot", arguments={
-                            "name": f"after_position_{i+1}"
-                        })
-                        print(f"Screenshot taken after position {i+1}")
-                    except Exception as e:
-                        print(f"Error with position {i+1}:", e)
-                
+                print("Click to add title:", result.text if hasattr(result, 'text') else result)
             except Exception as e:
-                print("Error interacting with title placeholder:", e)
+                print("Error clicking title placeholder:", e)
                 
-            # Take a final screenshot
-            result = await session.call_tool("playwright_screenshot", arguments={ 
-                "name": "powerpoint_final"
+            #Take a final screenshot
+            result = await session.call_tool("playwright_screenshot", arguments={ "name": "powerpoint_final"
             })
             print("Final screenshot taken")
 
