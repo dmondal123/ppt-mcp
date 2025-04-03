@@ -129,16 +129,26 @@ async def test_sharepoint_login():
         await page.screenshot(path="powerpoint_final.png")
         print("Final screenshot taken")
         
-        # Print all text elements on the page for debugging
+        # Print only editable elements on the page for debugging
         try:
-            all_text_elements = await page.query_selector_all("div, span, p, h1, h2, h3, [role='textbox']")
-            print(f"Found {len(all_text_elements)} potential text elements")
+            all_elements = await page.query_selector_all("*")
+            print(f"Checking {len(all_elements)} elements for editability")
             
-            for i, element in enumerate(all_text_elements[:20]):  # Limit to first 20 elements
+            editable_elements = []
+            for element in all_elements:
+                try:
+                    is_editable = await element.evaluate("el => el.isContentEditable")
+                    if is_editable:
+                        editable_elements.append(element)
+                except Exception:
+                    continue
+            
+            print(f"Found {len(editable_elements)} editable elements")
+            
+            for i, element in enumerate(editable_elements):
                 try:
                     tag_name = await element.evaluate("el => el.tagName")
                     text_content = await element.text_content()
-                    is_editable = await element.evaluate("el => el.isContentEditable")
                     
                     # Get attributes
                     id_attr = await element.get_attribute("id") or ""
@@ -146,9 +156,8 @@ async def test_sharepoint_login():
                     aria_label = await element.get_attribute("aria-label") or ""
                     role = await element.get_attribute("role") or ""
                     
-                    print(f"Element {i+1}: {tag_name}")
+                    print(f"Editable Element {i+1}: {tag_name}")
                     print(f"  Text: {text_content[:50]}{'...' if len(text_content) > 50 else ''}")
-                    print(f"  Editable: {is_editable}")
                     print(f"  ID: {id_attr}")
                     print(f"  Class: {class_attr}")
                     print(f"  Aria-label: {aria_label}")
@@ -157,7 +166,7 @@ async def test_sharepoint_login():
                 except Exception as e:
                     print(f"Error getting element {i+1} info: {e}")
         except Exception as e:
-            print(f"Error getting text elements: {e}")
+            print(f"Error getting editable elements: {e}")
         
         # Close browser
         await browser.close()
