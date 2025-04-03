@@ -70,24 +70,28 @@ async def test_sharepoint_login():
             #Adding a small delay to ensure the editor loads properly
             await asyncio.sleep(5)  # Increased delay to ensure page loads
             
-            # Get page content to inspect elements
+            # Get page content to inspect elements with proper return handling
             result = await session.call_tool("playwright_evaluate", arguments={
                 "expression": """
                     () => {
-                        // Get all visible elements that might be title placeholders
-                        const elements = Array.from(document.querySelectorAll('div, span, [contenteditable="true"]'));
-                        return elements.map(el => ({
-                            tag: el.tagName,
-                            id: el.id,
-                            className: el.className,
-                            text: el.innerText,
-                            isEditable: el.isContentEditable,
-                            rect: el.getBoundingClientRect()
-                        })).filter(info => 
-                            info.text.includes('title') || 
-                            info.text.includes('Title') || 
-                            info.isEditable
-                        );
+                        try {
+                            // Get all visible elements that might be title placeholders
+                            const elements = Array.from(document.querySelectorAll('div, span, [contenteditable="true"]'));
+                            return JSON.stringify(elements.map(el => ({
+                                tag: el.tagName,
+                                id: el.id,
+                                className: el.className,
+                                text: el.innerText,
+                                isEditable: el.isContentEditable,
+                                rect: el.getBoundingClientRect()
+                            })).filter(info => 
+                                info.text.includes('title') || 
+                                info.text.includes('Title') || 
+                                info.isEditable
+                            ));
+                        } catch (e) {
+                            return JSON.stringify({error: e.toString()});
+                        }
                     }
                 """
             })
@@ -135,16 +139,17 @@ async def test_sharepoint_login():
                                 const element = document.elementFromPoint(centerX, centerY);
                                 if (element) {
                                     element.click();
-                                    return {clicked: true, element: element.tagName, id: element.id, class: element.className};
+                                    return JSON.stringify({clicked: true, element: element.tagName, id: element.id, class: element.className});
                                 }
-                                return {clicked: false};
+                                return JSON.stringify({clicked: false});
                             }
                         """
                     })
                     print("Click result:", result.text(result))
                     
-                    # Try typing after clicking
-                    result = await session.call_tool("playwright_keyboard_type", arguments={
+                    # Use the correct keyboard typing method
+                    result = await session.call_tool("playwright_type", arguments={
+                        "selector": "body", # Type into the currently focused element
                         "text": "PPT Agent Demo"
                     })
                     print("Keyboard type result:", result.text(result))
