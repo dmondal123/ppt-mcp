@@ -131,42 +131,100 @@ async def test_sharepoint_login():
         
         # Print only editable elements on the page for debugging
         try:
-            all_elements = await page.query_selector_all("*")
-            print(f"Checking {len(all_elements)} elements for editability")
+            print("Trying alternative methods to find editable elements...")
             
-            editable_elements = []
-            for element in all_elements:
+            # Method 1: Look for elements with specific attributes that might indicate editability
+            potential_editable_selectors = [
+                "[contenteditable]",
+                "[role='textbox']",
+                "[aria-multiline='true']",
+                "input:not([type='hidden'])",
+                "textarea",
+                "[data-slate-editor]",
+                "[data-automation-id*='title']",
+                "[data-automation-id*='edit']",
+                "[class*='title']",
+                "[class*='edit']"
+            ]
+            
+            for selector in potential_editable_selectors:
+                elements = await page.query_selector_all(selector)
+                if elements:
+                    print(f"Found {len(elements)} elements with selector: {selector}")
+                    for i, element in enumerate(elements[:5]):  # Limit to first 5 elements per selector
+                        try:
+                            tag_name = await element.evaluate("el => el.tagName")
+                            text_content = await element.text_content()
+                            
+                            # Get attributes
+                            id_attr = await element.get_attribute("id") or ""
+                            class_attr = await element.get_attribute("class") or ""
+                            aria_label = await element.get_attribute("aria-label") or ""
+                            
+                            print(f"Potential Editable Element {i+1} with selector {selector}: {tag_name}")
+                            print(f"  Text: {text_content[:50]}{'...' if len(text_content) > 50 else ''}")
+                            print(f"  ID: {id_attr}")
+                            print(f"  Class: {class_attr}")
+                            print(f"  Aria-label: {aria_label}")
+                            print("---")
+                        except Exception as e:
+                            print(f"Error getting element info: {e}")
+            
+            # Method 2: Try to identify elements by their position
+            print("Checking elements at typical title positions...")
+            viewport_size = page.viewport_size
+            center_x = viewport_size["width"] // 2
+            
+            # Check elements at different vertical positions where titles might be
+            for y_pos in [viewport_size["height"] // 4, viewport_size["height"] // 3, viewport_size["height"] // 2]:
                 try:
-                    is_editable = await element.evaluate("el => el.isContentEditable")
-                    if is_editable:
-                        editable_elements.append(element)
-                except Exception:
-                    continue
-            
-            print(f"Found {len(editable_elements)} editable elements")
-            
-            for i, element in enumerate(editable_elements):
-                try:
-                    tag_name = await element.evaluate("el => el.tagName")
-                    text_content = await element.text_content()
+                    # Get element at this position
+                    element = await page.evaluate(f"""
+                        () => {{
+                            const element = document.elementFromPoint({center_x}, {y_pos});
+                            if (element) {{
+                                return {{
+                                    tag: element.tagName,
+                                    id: element.id || "",
+                                    class: element.className || "",
+                                    ariaLabel: element.getAttribute('aria-label') || "",
+                                    text: element.innerText || "",
+                                    position: "{center_x}, {y_pos}"
+                                }};
+                            }}
+                            return null;
+                        }}
+                    """)
                     
-                    # Get attributes
-                    id_attr = await element.get_attribute("id") or ""
-                    class_attr = await element.get_attribute("class") or ""
-                    aria_label = await element.get_attribute("aria-label") or ""
-                    role = await element.get_attribute("role") or ""
-                    
-                    print(f"Editable Element {i+1}: {tag_name}")
-                    print(f"  Text: {text_content[:50]}{'...' if len(text_content) > 50 else ''}")
-                    print(f"  ID: {id_attr}")
-                    print(f"  Class: {class_attr}")
-                    print(f"  Aria-label: {aria_label}")
-                    print(f"  Role: {role}")
-                    print("---")
+                    if element:
+                        print(f"Element at position ({center_x}, {y_pos}):")
+                        print(f"  Tag: {element.get('tag')}")
+                        print(f"  Text: {element.get('text')[:50]}{'...' if len(element.get('text', '')) > 50 else ''}")
+                        print(f"  ID: {element.get('id')}")
+                        print(f"  Class: {element.get('class')}")
+                        print(f"  Aria-label: {element.get('ariaLabel')}")
+                        print("---")
                 except Exception as e:
-                    print(f"Error getting element {i+1} info: {e}")
+                    print(f"Error checking position ({center_x}, {y_pos}): {e}")
+            
+            # Method 3: Try to interact with the title area directly
+            print("Attempting direct interaction with title area...")
+            try:
+                # Click where the title should be
+                title_y = viewport_size["height"] // 3
+                await page.mouse.click(center_x, title_y)
+                
+                # Try to type and see if it works
+                await page.keyboard.type("Test Title")
+                
+                # Take a screenshot to see if typing worked
+                await page.screenshot(path="title_typing_test.png")
+                print("Typed 'Test Title' at position ({center_x}, {title_y}) - check title_typing_test.png")
+            except Exception as e:
+                print(f"Error with direct interaction: {e}")
+                
         except Exception as e:
-            print(f"Error getting editable elements: {e}")
+            print(f"Error in alternative methods: {e}")
         
         # Close browser
         await browser.close()
