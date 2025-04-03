@@ -52,55 +52,41 @@ async def test_sharepoint_login():
         
         # Wait for the page to load
         await page.wait_for_load_state("networkidle")
+        print("Page loaded after login")
         
-        # Click on "New" button
+        # Take a screenshot after login
+        await page.screenshot(path="after_login.png")
+        
+        # Navigate directly to the PowerPoint editor URL
         try:
-            await page.get_by_text("New").click()
-            print("Clicked New button")
+            await page.goto("https://visainc-my.sharepoint.com/personal/diymonda_visa_com/_layouts/15/Doc.aspx?sourcedoc={}&action=edit")
+            print("Navigated directly to PowerPoint editor")
+            await page.wait_for_load_state("networkidle")
+            await asyncio.sleep(5)  # Additional delay to ensure editor loads
         except Exception as e:
-            print(f"Error clicking New button: {e}")
-        
-        # Click on PowerPoint presentation
-        try:
-            await page.get_by_text("PowerPoint presentation").click()
-            print("Clicked PowerPoint presentation")
-        except Exception as e:
-            print(f"Error clicking PowerPoint presentation: {e}")
-        
-        # Wait for the PowerPoint editor to load
-        await page.wait_for_load_state("networkidle")
-        await asyncio.sleep(5)  # Additional delay to ensure editor loads
+            print(f"Error navigating to PowerPoint editor: {e}")
         
         # Take a screenshot of the PowerPoint editor
         await page.screenshot(path="powerpoint_editor.png")
         print("PowerPoint editor screenshot taken")
         
+        # Print page title and URL for debugging
+        title = await page.title()
+        url = page.url
+        print(f"Page title: {title}")
+        print(f"Current URL: {url}")
+        
         # Look specifically for the "Click to add title" element
         print("Looking for 'Click to add title' element...")
         try:
             # Try to find the element by text content
-            title_element = await page.get_by_text("Click to add title").first
-            if title_element:
+            title_locator = page.get_by_text("Click to add title")
+            count = await title_locator.count()
+            print(f"Found {count} elements with text 'Click to add title'")
+            
+            if count > 0:
+                title_element = await title_locator.first
                 print("Found 'Click to add title' element by text")
-                
-                # Get element details
-                tag_name = await title_element.evaluate("el => el.tagName")
-                is_editable = await title_element.evaluate("el => el.isContentEditable")
-                parent_editable = await title_element.evaluate("el => el.parentElement ? el.parentElement.isContentEditable : false")
-                grandparent_editable = await title_element.evaluate("el => el.parentElement && el.parentElement.parentElement ? el.parentElement.parentElement.isContentEditable : false")
-                
-                # Get attributes
-                id_attr = await title_element.get_attribute("id") or ""
-                class_attr = await title_element.get_attribute("class") or ""
-                aria_label = await title_element.get_attribute("aria-label") or ""
-                
-                print(f"Element Tag: {tag_name}")
-                print(f"Element Editable: {is_editable}")
-                print(f"Parent Editable: {parent_editable}")
-                print(f"Grandparent Editable: {grandparent_editable}")
-                print(f"ID: {id_attr}")
-                print(f"Class: {class_attr}")
-                print(f"Aria-label: {aria_label}")
                 
                 # Try to click on it
                 await title_element.click()
@@ -113,154 +99,79 @@ async def test_sharepoint_login():
                 # Take a screenshot
                 await page.screenshot(path="after_title_click.png")
             else:
-                # Try to find by class
-                span_element = await page.query_selector("span.NormalTextRun")
-                if span_element:
-                    print("Found span.NormalTextRun element")
-                    
-                    # Get text content
-                    text_content = await span_element.text_content()
-                    print(f"Text content: {text_content}")
-                    
-                    if "Click to add title" in text_content:
-                        print("Element contains 'Click to add title' text")
+                print("No 'Click to add title' elements found, trying alternative methods")
+                
+                # Try to find elements with text containing "title"
+                title_related_locator = page.get_by_text("title", exact=False)
+                count = await title_related_locator.count()
+                print(f"Found {count} elements with text containing 'title'")
+                
+                if count > 0:
+                    for i in range(count):
+                        element = await title_related_locator.nth(i)
+                        text = await element.text_content()
+                        print(f"Element {i+1} text: {text}")
                         
                         # Try to click on it
-                        await span_element.click()
-                        print("Clicked on span.NormalTextRun element")
+                        await element.click()
+                        print(f"Clicked on element {i+1}")
                         
                         # Try to type after clicking
                         await page.keyboard.type("PPT Agent Demo")
                         print("Typed title text after clicking")
                         
                         # Take a screenshot
-                        await page.screenshot(path="after_span_click.png")
+                        await page.screenshot(path=f"after_title_related_{i+1}_click.png")
+                        break
                 else:
-                    print("Could not find span.NormalTextRun element")
+                    # Try clicking in the center of the slide where title usually is
+                    viewport_size = page.viewport_size
+                    center_x = viewport_size["width"] // 2
+                    center_y = viewport_size["height"] // 3
                     
-                    # Try to find by style attributes
-                    elements_with_style = await page.query_selector_all("span[style*='vertical-align']")
-                    print(f"Found {len(elements_with_style)} elements with vertical-align style")
+                    # Click where the title should be
+                    await page.mouse.click(center_x, center_y)
+                    print(f"Clicked at position ({center_x}, {center_y})")
                     
-                    for i, element in enumerate(elements_with_style):
-                        text = await element.text_content()
-                        if "Click to add title" in text:
-                            print(f"Found element {i+1} with 'Click to add title' text")
-                            
-                            # Try to click on it
-                            await element.click()
-                            print(f"Clicked on element {i+1}")
-                            
-                            # Try to type after clicking
-                            await page.keyboard.type("PPT Agent Demo")
-                            print("Typed title text after clicking")
-                            
-                            # Take a screenshot
-                            await page.screenshot(path=f"after_element_{i+1}_click.png")
-                            break
+                    # Try to type after clicking
+                    await page.keyboard.type("PPT Agent Demo")
+                    print("Typed title text after clicking")
+                    
+                    # Take a screenshot
+                    await page.screenshot(path="after_position_click.png")
         except Exception as e:
-            print(f"Error finding 'Click to add title' element: {e}")
+            print(f"Error finding and interacting with title element: {e}")
         
-        # Take a final screenshot
-        await page.screenshot(path="powerpoint_final.png")
-        print("Final screenshot taken")
-        
-        # Print only editable elements on the page for debugging
+        # Try to find any editable elements
         try:
-            print("Trying alternative methods to find editable elements...")
-            
-            # Method 1: Look for elements with specific attributes that might indicate editability
-            potential_editable_selectors = [
-                "[contenteditable]",
+            # Look for common editable elements
+            editable_selectors = [
+                "[contenteditable='true']",
                 "[role='textbox']",
-                "[aria-multiline='true']",
-                "input:not([type='hidden'])",
-                "textarea",
-                "[data-slate-editor]",
-                "[data-automation-id*='title']",
-                "[data-automation-id*='edit']",
-                "[class*='title']",
-                "[class*='edit']"
+                "div[class*='title']",
+                "div[class*='slide-title']",
+                "div[class*='placeholder']"
             ]
             
-            for selector in potential_editable_selectors:
+            for selector in editable_selectors:
                 elements = await page.query_selector_all(selector)
+                print(f"Found {len(elements)} elements with selector: {selector}")
+                
                 if elements:
-                    print(f"Found {len(elements)} elements with selector: {selector}")
-                    for i, element in enumerate(elements[:5]):  # Limit to first 5 elements per selector
-                        try:
-                            tag_name = await element.evaluate("el => el.tagName")
-                            text_content = await element.text_content()
-                            
-                            # Get attributes
-                            id_attr = await element.get_attribute("id") or ""
-                            class_attr = await element.get_attribute("class") or ""
-                            aria_label = await element.get_attribute("aria-label") or ""
-                            
-                            print(f"Potential Editable Element {i+1} with selector {selector}: {tag_name}")
-                            print(f"  Text: {text_content[:50]}{'...' if len(text_content) > 50 else ''}")
-                            print(f"  ID: {id_attr}")
-                            print(f"  Class: {class_attr}")
-                            print(f"  Aria-label: {aria_label}")
-                            print("---")
-                        except Exception as e:
-                            print(f"Error getting element info: {e}")
-            
-            # Method 2: Try to identify elements by their position
-            print("Checking elements at typical title positions...")
-            viewport_size = page.viewport_size
-            center_x = viewport_size["width"] // 2
-            
-            # Check elements at different vertical positions where titles might be
-            for y_pos in [viewport_size["height"] // 4, viewport_size["height"] // 3, viewport_size["height"] // 2]:
-                try:
-                    # Get element at this position
-                    element = await page.evaluate(f"""
-                        () => {{
-                            const element = document.elementFromPoint({center_x}, {y_pos});
-                            if (element) {{
-                                return {{
-                                    tag: element.tagName,
-                                    id: element.id || "",
-                                    class: element.className || "",
-                                    ariaLabel: element.getAttribute('aria-label') || "",
-                                    text: element.innerText || "",
-                                    position: "{center_x}, {y_pos}"
-                                }};
-                            }}
-                            return null;
-                        }}
-                    """)
-                    
-                    if element:
-                        print(f"Element at position ({center_x}, {y_pos}):")
-                        print(f"  Tag: {element.get('tag')}")
-                        print(f"  Text: {element.get('text')[:50]}{'...' if len(element.get('text', '')) > 50 else ''}")
-                        print(f"  ID: {element.get('id')}")
-                        print(f"  Class: {element.get('class')}")
-                        print(f"  Aria-label: {element.get('ariaLabel')}")
-                        print("---")
-                except Exception as e:
-                    print(f"Error checking position ({center_x}, {y_pos}): {e}")
-            
-            # Method 3: Try to interact with the title area directly
-            print("Attempting direct interaction with title area...")
-            try:
-                # Click where the title should be
-                title_y = viewport_size["height"] // 3
-                await page.mouse.click(center_x, title_y)
-                
-                # Try to type and see if it works
-                await page.keyboard.type("Test Title")
-                
-                # Take a screenshot to see if typing worked
-                await page.screenshot(path="title_typing_test.png")
-                print("Typed 'Test Title' at position ({center_x}, {title_y}) - check title_typing_test.png")
-            except Exception as e:
-                print(f"Error with direct interaction: {e}")
-                
+                    for i, element in enumerate(elements[:3]):  # Limit to first 3 elements
+                        text = await element.text_content()
+                        print(f"Element {i+1} with selector {selector} text: {text}")
+                        
+                        # Try to click and type
+                        await element.click()
+                        await page.keyboard.type("PPT Agent Demo")
+                        print(f"Clicked and typed in element {i+1} with selector {selector}")
+                        
+                        # Take a screenshot
+                        await page.screenshot(path=f"after_{selector.replace('[', '').replace(']', '').replace('*', '').replace('=', '_').replace('\"', '')}_click_{i+1}.png")
+                        break
         except Exception as e:
-            print(f"Error in alternative methods: {e}")
+            print(f"Error finding editable elements: {e}")
         
         # Close browser
         await browser.close()
