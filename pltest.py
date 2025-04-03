@@ -142,36 +142,106 @@ async def test_sharepoint_login():
         except Exception as e:
             print(f"Error finding and interacting with title element: {e}")
         
-        # Try to find any editable elements
+        # Specifically check the span.NormalTextRun element
+        print("Checking if span.NormalTextRun is editable...")
         try:
-            # Look for common editable elements
-            editable_selectors = [
-                "[contenteditable='true']",
-                "[role='textbox']",
-                "div[class*='title']",
-                "div[class*='slide-title']",
-                "div[class*='placeholder']"
-            ]
+            # Find the span.NormalTextRun element
+            span_element = await page.query_selector("span.NormalTextRun")
             
-            for selector in editable_selectors:
-                elements = await page.query_selector_all(selector)
-                print(f"Found {len(elements)} elements with selector: {selector}")
+            if span_element:
+                # Get text content
+                text_content = await span_element.text_content()
+                print(f"Found span.NormalTextRun with text: {text_content}")
                 
-                if elements:
-                    for i, element in enumerate(elements[:3]):  # Limit to first 3 elements
-                        text = await element.text_content()
-                        print(f"Element {i+1} with selector {selector} text: {text}")
+                # Check if the element itself is editable
+                is_element_editable = await span_element.is_editable()
+                print(f"Is span.NormalTextRun directly editable: {is_element_editable}")
+                
+                # Try to click on it
+                await span_element.click()
+                print("Clicked on span.NormalTextRun")
+                
+                # Try to type after clicking
+                await page.keyboard.type("PPT Agent Demo")
+                print("Typed text after clicking span.NormalTextRun")
+                
+                # Take a screenshot
+                await page.screenshot(path="after_normalTextRun_click.png")
+                
+                # Try to find parent elements that might be editable
+                parent_element = await page.evaluate("""
+                    selector => {
+                        const element = document.querySelector(selector);
+                        if (!element) return null;
                         
-                        # Try to click and type
-                        await element.click()
-                        await page.keyboard.type("PPT Agent Demo")
-                        print(f"Clicked and typed in element {i+1} with selector {selector}")
+                        // Find closest potentially editable parent
+                        let parent = element.parentElement;
+                        let path = [];
                         
-                        # Take a screenshot
-                        await page.screenshot(path=f"after_{selector.replace('[', '').replace(']', '').replace('*', '').replace('=', '_').replace('\"', '')}_click_{i+1}.png")
-                        break
+                        while (parent) {
+                            path.push({
+                                tag: parent.tagName,
+                                id: parent.id || "",
+                                class: parent.className || "",
+                                isEditable: parent.isContentEditable
+                            });
+                            
+                            if (parent.isContentEditable) break;
+                            parent = parent.parentElement;
+                        }
+                        
+                        return path;
+                    }
+                """, "span.NormalTextRun")
+                
+                if parent_element:
+                    print("Parent element hierarchy:")
+                    for i, parent in enumerate(parent_element):
+                        print(f"  Level {i+1}: {parent.get('tag')} (ID: {parent.get('id')}, Class: {parent.get('class')}, Editable: {parent.get('isEditable')})")
+                        
+                        # If we found an editable parent, try to use its selector
+                        if parent.get('isEditable'):
+                            parent_id = parent.get('id')
+                            parent_class = parent.get('class')
+                            
+                            if parent_id:
+                                parent_selector = f"#{parent_id}"
+                            elif parent_class:
+                                parent_selector = f".{parent_class.replace(' ', '.')}"
+                            else:
+                                continue
+                            
+                            print(f"Trying to interact with editable parent using selector: {parent_selector}")
+                            
+                            try:
+                                parent_element = await page.query_selector(parent_selector)
+                                if parent_element:
+                                    await parent_element.click()
+                                    await page.keyboard.type("PPT Agent Demo via Parent")
+                                    await page.screenshot(path=f"after_parent_{i+1}_click.png")
+                            except Exception as e:
+                                print(f"Error interacting with parent {i+1}: {e}")
+            else:
+                print("Could not find span.NormalTextRun element")
+                
+                # Try to find any elements with NormalTextRun in their class
+                elements_with_normal_text = await page.query_selector_all("[class*='NormalTextRun']")
+                print(f"Found {len(elements_with_normal_text)} elements with NormalTextRun in their class")
+                
+                for i, element in enumerate(elements_with_normal_text):
+                    text = await element.text_content()
+                    print(f"Element {i+1} text: {text}")
+                    
+                    # Check if this element is editable
+                    is_editable = await element.is_editable()
+                    print(f"Element {i+1} is editable: {is_editable}")
+                    
+                    # Try to click and type
+                    await element.click()
+                    await page.keyboard.type(f"PPT Agent Demo {i+1}")
+                    await page.screenshot(path=f"after_normalTextRun_variant_{i+1}_click.png")
         except Exception as e:
-            print(f"Error finding editable elements: {e}")
+            print(f"Error checking span.NormalTextRun: {e}")
         
         # Close browser
         await browser.close()

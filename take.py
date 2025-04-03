@@ -68,96 +68,89 @@ async def test_sharepoint_login():
             print("Click PowerPoint presentation result:", result.text if hasattr(result, 'text') else result)
             #Wait for the PowerPoint editor to load
             #Adding a small delay to ensure the editor loads properly
-            await asyncio.sleep(5)  # Increased delay to ensure page loads
-            
-            # Get page content to inspect elements with proper return handling
-            result = await session.call_tool("playwright_evaluate", arguments={
-                "expression": """
-                    () => {
-                        try {
-                            // Get all visible elements that might be title placeholders
-                            const elements = Array.from(document.querySelectorAll('div, span, [contenteditable="true"]'));
-                            return JSON.stringify(elements.map(el => ({
-                                tag: el.tagName,
-                                id: el.id,
-                                className: el.className,
-                                text: el.innerText,
-                                isEditable: el.isContentEditable,
-                                rect: el.getBoundingClientRect()
-                            })).filter(info => 
-                                info.text.includes('title') || 
-                                info.text.includes('Title') || 
-                                info.isEditable
-                            ));
-                        } catch (e) {
-                            return JSON.stringify({error: e.toString()});
-                        }
-                    }
-                """
-            })
-            print("Page elements:", result.text(result))
-            
-            # Try different selectors for the title
-            selectors_to_try = [
-                "[contenteditable='true']",
-                ".title-placeholder",
-                ".slide-title",
-                "[aria-label*='title']",
-                "[placeholder*='title']",
-                ".pptx-slide-title"
-            ]
-            
-            title_found = False
-            for selector in selectors_to_try:
-                try:
-                    # Check if selector exists
-                    check_result = await session.call_tool("playwright_evaluate", arguments={
-                        "expression": f"() => document.querySelector('{selector}') !== null"
-                    })
-                    
-                    if check_result.text(check_result) == "true":
-                        print(f"Found selector: {selector}")
-                        result = await session.call_tool("playwright_fill", arguments={
-                            "selector": selector,
-                            "value": "PPT Agent Demo"
+            await asyncio.sleep(1)
+            #Try to click on "Click to add title" text first
+            try:
+                # First try to click on the element
+                click_result = await session.call_tool("playwright_click", arguments={
+                    "selector": "span.NormalTextRun"
+                })
+                print("Click on span.NormalTextRun result:", click_result.text(click_result))
+                
+                # Try to fill it after clicking
+                fill_result = await session.call_tool("playwright_fill", arguments={
+                    "selector": "span.NormalTextRun",
+                    "value": "ppt agent"
+                })
+                print("Fill title result:", fill_result.text(fill_result))
+                
+                # If direct fill doesn't work, try typing after clicking
+                type_result = await session.call_tool("playwright_type", arguments={
+                    "text": "ppt agent via keyboard"
+                })
+                print("Keyboard type result:", type_result.text(type_result))
+                
+                # Try clicking on parent elements
+                parent_selectors = [
+                    "div.title-placeholder",
+                    "div.slide-title",
+                    "[contenteditable='true']",
+                    "[role='textbox']"
+                ]
+                
+                for selector in parent_selectors:
+                    try:
+                        parent_click = await session.call_tool("playwright_click", arguments={
+                            "selector": selector
                         })
-                        print(f"Fill title result with {selector}:", result.text(result))
-                        title_found = True
-                        break
-                except Exception as e:
-                    print(f"Error with selector {selector}:", e)
-            
-            if not title_found:
-                # Try clicking in the center of the slide where title usually is
-                try:
-                    result = await session.call_tool("playwright_evaluate", arguments={
-                        "expression": """
-                            () => {
-                                // Try to click in the upper part of the slide where title usually is
-                                const centerX = window.innerWidth / 2;
-                                const centerY = window.innerHeight / 3;
-                                const element = document.elementFromPoint(centerX, centerY);
-                                if (element) {
-                                    element.click();
-                                    return JSON.stringify({clicked: true, element: element.tagName, id: element.id, class: element.className});
-                                }
-                                return JSON.stringify({clicked: false});
-                            }
-                        """
-                    })
-                    print("Click result:", result.text(result))
-                    
-                    # Use the correct keyboard typing method
-                    result = await session.call_tool("playwright_type", arguments={
-                        "selector": "body", # Type into the currently focused element
-                        "text": "PPT Agent Demo"
-                    })
-                    print("Keyboard type result:", result.text(result))
-                except Exception as e:
-                    print("Error with manual click:", e)
-            
+                        print(f"Click on {selector} result:", parent_click.text(parent_click))
+                        
+                        parent_type = await session.call_tool("playwright_type", arguments={
+                            "text": f"ppt agent via {selector}"
+                        })
+                        print(f"Type in {selector} result:", parent_type.text(parent_type))
+                        
+                        # Take a screenshot after each attempt
+                        screenshot = await session.call_tool("playwright_screenshot", arguments={
+                            "name": f"after_{selector.replace('[', '').replace(']', '').replace('=', '_').replace('\'', '')}"
+                        })
+                        print(f"Screenshot taken after {selector}")
+                    except Exception as e:
+                        print(f"Error with {selector}:", e)
+                
+                # Try clicking at different positions on the slide
+                positions = [
+                    {"x": 400, "y": 150},  # Top center
+                    {"x": 400, "y": 200},  # Upper center
+                    {"x": 400, "y": 250}   # Middle center
+                ]
+                
+                for i, pos in enumerate(positions):
+                    try:
+                        position_click = await session.call_tool("playwright_mouse_click", arguments={
+                            "x": pos["x"],
+                            "y": pos["y"]
+                        })
+                        print(f"Click at position ({pos['x']}, {pos['y']}) result:", position_click.text(position_click))
+                        
+                        position_type = await session.call_tool("playwright_type", arguments={
+                            "text": f"ppt agent at position {i+1}"
+                        })
+                        print(f"Type at position {i+1} result:", position_type.text(position_type))
+                        
+                        # Take a screenshot after each position attempt
+                        screenshot = await session.call_tool("playwright_screenshot", arguments={
+                            "name": f"after_position_{i+1}"
+                        })
+                        print(f"Screenshot taken after position {i+1}")
+                    except Exception as e:
+                        print(f"Error with position {i+1}:", e)
+                
+            except Exception as e:
+                print("Error interacting with title placeholder:", e)
+                
             # Take a final screenshot
-            result = await session.call_tool("playwright_screenshot", arguments={
+            result = await session.call_tool("playwright_screenshot", arguments={ 
                 "name": "powerpoint_final"
             })
             print("Final screenshot taken")
