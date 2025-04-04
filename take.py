@@ -86,18 +86,7 @@ async def test_sharepoint_login():
             # Try to switch to the second tab using the context.pages approach
             # We need to modify server.py to add this capability, but for now we can try a workaround
             result = await session.call_tool("playwright_evaluate", arguments={
-                "script": `
-                (() => {
-                    // This is a workaround to try to detect if we're in a new tab
-                    // and might not work in all cases
-                    if (document.title.includes("PowerPoint") || 
-                        window.location.href.includes("Doc.aspx")) {
-                        return "Already on PowerPoint editor";
-                    } else {
-                        return "Not on PowerPoint editor";
-                    }
-                })()
-                `
+                "script": "(() => { if (document.title.includes('PowerPoint') || window.location.href.includes('Doc.aspx')) { return 'Already on PowerPoint editor'; } else { return 'Not on PowerPoint editor'; } })()"
             })
             print(f"Tab detection result: {result}")
             
