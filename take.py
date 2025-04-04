@@ -75,7 +75,17 @@ async def test_sharepoint_login():
             result = await session.call_tool("playwright_evaluate", arguments={
                 "script": "window.location.href"
             })
-            print(f"Current URL before inserting slide: {result[0].text}")
+            print(f"Current URL before inserting slide: {result}")
+            
+            # Take a screenshot to verify we're on the correct page
+            result = await session.call_tool("playwright_screenshot", arguments={
+                "name": "before_insert_slide"
+            })
+            print("Screenshot taken of current page")
+            
+            # Get text content to help debug
+            result = await session.call_tool("playwright_get_text_content", arguments={})
+            print(f"Page content before inserting slide: {result}")
             
             #Click on "Insert" tab in the ribbon
             try:
