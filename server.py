@@ -148,6 +148,25 @@ async def handle_list_tools() -> list[types.Tool]:
                 },
                 "required": ["selector"]
             }
+        ),
+        types.Tool(
+            name="playwright_list_pages",
+            description="List all pages/tabs in the current browser context",
+            inputSchema={
+                "type": "object",
+                "properties": {}
+            }
+        ),
+        types.Tool(
+            name="playwright_switch_to_page",
+            description="Switch to a specific page/tab by index",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "index": {"type": "integer", "description": "Index of the page to switch to"}
+                },
+                "required": ["index"]
+            }
         )
     ]
 
@@ -347,6 +366,37 @@ class GetHtmlContentToolHandler(ToolHandler):
         html_content = await page.locator(selector).inner_html()
         return [types.TextContent(type="text", text=f"HTML content of element with selector {selector}: {html_content}")]
 
+class ListPagesToolHandler(ToolHandler):
+    async def handle(self, name: str, arguments: dict | None) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
+        if not self._sessions:
+            return [types.TextContent(type="text", text="No active session. Please create a new session first.")]
+        session_id = list(self._sessions.keys())[-1]
+        context = self._sessions[session_id]["page"].context
+        pages = context.pages
+        
+        page_info = []
+        for i, page in enumerate(pages):
+            page_info.append(f"Page {i}: URL={page.url}, Title={await page.title()}")
+        
+        return [types.TextContent(type="text", text=f"Available pages: {page_info}")]
+
+class SwitchToPageToolHandler(ToolHandler):
+    async def handle(self, name: str, arguments: dict | None) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
+        if not self._sessions:
+            return [types.TextContent(type="text", text="No active session. Please create a new session first.")]
+        session_id = list(self._sessions.keys())[-1]
+        context = self._sessions[session_id]["page"].context
+        pages = context.pages
+        
+        index = arguments.get("index", 0)
+        if index < 0 or index >= len(pages):
+            return [types.TextContent(type="text", text=f"Invalid page index: {index}. Available pages: 0-{len(pages)-1}")]
+        
+        page = pages[index]
+        await page.bring_to_front()
+        self._sessions[session_id]["page"] = page
+        
+        return [types.TextContent(type="text", text=f"Switched to page {index}: URL={page.url}, Title={await page.title()}")]
 
 tool_handlers = {
     "playwright_navigate": NavigateToolHandler(),
@@ -358,6 +408,8 @@ tool_handlers = {
     "playwright_get_text_content": GetTextContentToolHandler(),
     "playwright_get_html_content": GetHtmlContentToolHandler(),
     "playwright_new_session":NewSessionToolHandler(),
+    "playwright_list_pages": ListPagesToolHandler(),
+    "playwright_switch_to_page": SwitchToPageToolHandler(),
 }
 
 

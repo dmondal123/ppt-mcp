@@ -70,31 +70,21 @@ async def test_sharepoint_login():
             #Wait for the PowerPoint editor to load
             await asyncio.sleep(5)  # Increased delay to ensure editor fully loads
             
-            # Check if we're still on the same page
-            result = await session.call_tool("playwright_evaluate", arguments={
-                "script": "window.location.href"
-            })
-            current_url = str(result)
-            print(f"Current URL after clicking PowerPoint: {current_url}")
+            # List all available pages/tabs
+            result = await session.call_tool("playwright_list_pages", arguments={})
+            print(f"Available pages: {result}")
             
-            # Get all pages in the context and print their URLs
-            result = await session.call_tool("playwright_evaluate", arguments={
-                "script": "(() => { return { currentUrl: window.location.href, title: document.title }; })()"
+            # Switch to the second tab (index 1) if available
+            result = await session.call_tool("playwright_switch_to_page", arguments={
+                "index": 1
             })
-            print(f"Current page info: {result}")
-            
-            # Try to switch to the second tab using the context.pages approach
-            # We need to modify server.py to add this capability, but for now we can try a workaround
-            result = await session.call_tool("playwright_evaluate", arguments={
-                "script": "(() => { if (document.title.includes('PowerPoint') || window.location.href.includes('Doc.aspx')) { return 'Already on PowerPoint editor'; } else { return 'Not on PowerPoint editor'; } })()"
-            })
-            print(f"Tab detection result: {result}")
+            print(f"Switch to page result: {result}")
             
             # Take a screenshot to verify we're on the correct page
             result = await session.call_tool("playwright_screenshot", arguments={
-                "name": "current_page"
+                "name": "after_tab_switch"
             })
-            print("Screenshot taken of current page")
+            print("Screenshot taken after tab switch")
             
             # Now try to click on "Insert" tab in the ribbon
             try:
