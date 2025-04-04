@@ -70,44 +70,64 @@ async def test_sharepoint_login():
             #Wait for the PowerPoint editor to load
             await asyncio.sleep(5)  # Increased delay to ensure editor fully loads
             
-            # Try to switch to the new tab by evaluating all pages and switching to the last one
-            result = await session.call_tool("playwright_evaluate", arguments={
-                "script": """
-                (async () => {
-                    // This will run in the browser context
-                    const pages = await window.browsingContext.pages();
-                    if (pages.length > 1) {
-                        await pages[pages.length - 1].bringToFront();
-                        return "Switched to new tab: " + window.location.href;
-                    }
-                    return "No new tab found: " + window.location.href;
-                })()
-                """
-            })
-            print(f"Tab switch result: {result}")
-            
-            # Print the current URL after attempting to switch tabs
+            # Check if we're still on the same page
             result = await session.call_tool("playwright_evaluate", arguments={
                 "script": "window.location.href"
             })
-            print(f"Current URL after tab switch attempt: {result}")
+            current_url = str(result)
+            print(f"Current URL after clicking PowerPoint: {current_url}")
+            
+            # Try to switch to the new tab using JavaScript
+            result = await session.call_tool("playwright_evaluate", arguments={
+                "script": """
+                // Get all tabs/windows
+                const allWindows = window.open('', '_blank');
+                if (allWindows) {
+                    allWindows.close(); // Close the blank window we just opened
+                    return "Found other windows";
+                }
+                return "No other windows found";
+                """
+            })
+            print(f"Window check result: {result}")
+            
+            # Another approach - try to use keyboard shortcuts to switch tabs
+            result = await session.call_tool("playwright_evaluate", arguments={
+                "script": """
+                // Simulate Ctrl+Tab to switch to next tab
+                const e = new KeyboardEvent('keydown', {
+                    key: 'Tab',
+                    code: 'Tab',
+                    ctrlKey: true,
+                    bubbles: true
+                });
+                document.dispatchEvent(e);
+                return "Attempted to switch tab with keyboard shortcut";
+                """
+            })
+            print(f"Keyboard shortcut result: {result}")
+            
+            # Wait a bit for the tab switch to take effect
+            await asyncio.sleep(2)
+            
+            # Check URL again
+            result = await session.call_tool("playwright_evaluate", arguments={
+                "script": "window.location.href"
+            })
+            print(f"URL after tab switch attempts: {result}")
             
             # Take a screenshot to verify we're on the correct page
             result = await session.call_tool("playwright_screenshot", arguments={
-                "name": "after_tab_switch"
+                "name": "after_tab_switch_attempts"
             })
-            print("Screenshot taken after tab switch attempt")
+            print("Screenshot taken after tab switch attempts")
             
-            # Get text content to help debug
-            result = await session.call_tool("playwright_get_text_content", arguments={})
-            print(f"Page content before inserting slide: {result}")
-            
-            #Click on "Insert" tab in the ribbon
+            # Now try to click on "Insert" tab in the ribbon
             try:
                 result = await session.call_tool("playwright_click_text", arguments={
                     "text": "Insert"
                 })
-                print("Click on Insert tab result:", result.text if hasattr(result, 'text') else result)
+                print(f"Click on Insert tab result: {result}")
                 
                 #Click on "New Slide" button
                 result = await session.call_tool("playwright_click_text", arguments={
