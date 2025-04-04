@@ -77,50 +77,35 @@ async def test_sharepoint_login():
             current_url = str(result)
             print(f"Current URL after clicking PowerPoint: {current_url}")
             
-            # Try to switch to the new tab using JavaScript
+            # Get all pages in the context and print their URLs
             result = await session.call_tool("playwright_evaluate", arguments={
-                "script": """
-                // Get all tabs/windows
-                const allWindows = window.open('', '_blank');
-                if (allWindows) {
-                    allWindows.close(); // Close the blank window we just opened
-                    return "Found other windows";
-                }
-                return "No other windows found";
-                """
+                "script": "(() => { return { currentUrl: window.location.href, title: document.title }; })()"
             })
-            print(f"Window check result: {result}")
+            print(f"Current page info: {result}")
             
-            # Another approach - try to use keyboard shortcuts to switch tabs
+            # Try to switch to the second tab using the context.pages approach
+            # We need to modify server.py to add this capability, but for now we can try a workaround
             result = await session.call_tool("playwright_evaluate", arguments={
-                "script": """
-                // Simulate Ctrl+Tab to switch to next tab
-                const e = new KeyboardEvent('keydown', {
-                    key: 'Tab',
-                    code: 'Tab',
-                    ctrlKey: true,
-                    bubbles: true
-                });
-                document.dispatchEvent(e);
-                return "Attempted to switch tab with keyboard shortcut";
-                """
+                "script": `
+                (() => {
+                    // This is a workaround to try to detect if we're in a new tab
+                    // and might not work in all cases
+                    if (document.title.includes("PowerPoint") || 
+                        window.location.href.includes("Doc.aspx")) {
+                        return "Already on PowerPoint editor";
+                    } else {
+                        return "Not on PowerPoint editor";
+                    }
+                })()
+                `
             })
-            print(f"Keyboard shortcut result: {result}")
-            
-            # Wait a bit for the tab switch to take effect
-            await asyncio.sleep(2)
-            
-            # Check URL again
-            result = await session.call_tool("playwright_evaluate", arguments={
-                "script": "window.location.href"
-            })
-            print(f"URL after tab switch attempts: {result}")
+            print(f"Tab detection result: {result}")
             
             # Take a screenshot to verify we're on the correct page
             result = await session.call_tool("playwright_screenshot", arguments={
-                "name": "after_tab_switch_attempts"
+                "name": "current_page"
             })
-            print("Screenshot taken after tab switch attempts")
+            print("Screenshot taken of current page")
             
             # Now try to click on "Insert" tab in the ribbon
             try:
