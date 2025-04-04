@@ -74,17 +74,46 @@ async def test_sharepoint_login():
             result = await session.call_tool("playwright_list_pages", arguments={})
             print(f"Available pages: {result}")
             
-            # Switch to the second tab (index 1) if available
-            result = await session.call_tool("playwright_switch_to_page", arguments={
-                "index": 1
-            })
-            print(f"Switch to page result: {result}")
+            # Try to switch to each available page and check if it's the PowerPoint editor
+            # First get the number of pages
+            pages_info = str(result)
+            page_count = pages_info.count("Page ")
+            print(f"Detected {page_count} pages")
             
-            # Take a screenshot to verify we're on the correct page
-            result = await session.call_tool("playwright_screenshot", arguments={
-                "name": "after_tab_switch"
-            })
-            print("Screenshot taken after tab switch")
+            powerpoint_page_found = False
+            for i in range(page_count):
+                # Switch to this page
+                result = await session.call_tool("playwright_switch_to_page", arguments={
+                    "index": i
+                })
+                print(f"Switched to page {i}: {result}")
+                
+                # Check if this is the PowerPoint page
+                result = await session.call_tool("playwright_evaluate", arguments={
+                    "script": "document.title"
+                })
+                page_title = str(result)
+                print(f"Page {i} title: {page_title}")
+                
+                # Take a screenshot of this page
+                result = await session.call_tool("playwright_screenshot", arguments={
+                    "name": f"page_{i}"
+                })
+                print(f"Screenshot taken of page {i}")
+                
+                if "PowerPoint" in page_title or "presentation" in page_title.lower():
+                    print(f"Found PowerPoint editor on page {i}")
+                    powerpoint_page_found = True
+                    break
+            
+            if not powerpoint_page_found:
+                print("PowerPoint editor page not found in any tab")
+                # As a last resort, try the last page
+                if page_count > 1:
+                    result = await session.call_tool("playwright_switch_to_page", arguments={
+                        "index": page_count - 1
+                    })
+                    print(f"Switched to last page as fallback: {result}")
             
             # Now try to click on "Insert" tab in the ribbon
             try:
