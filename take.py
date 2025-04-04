@@ -68,20 +68,35 @@ async def test_sharepoint_login():
             print("Click PowerPoint presentation result:", result.text if hasattr(result, 'text') else result)
             
             #Wait for the PowerPoint editor to load
-            #Adding a small delay to ensure the editor loads properly
             await asyncio.sleep(5)  # Increased delay to ensure editor fully loads
             
-            # Print the current URL before proceeding
+            # Try to switch to the new tab by evaluating all pages and switching to the last one
+            result = await session.call_tool("playwright_evaluate", arguments={
+                "script": """
+                (async () => {
+                    // This will run in the browser context
+                    const pages = await window.browsingContext.pages();
+                    if (pages.length > 1) {
+                        await pages[pages.length - 1].bringToFront();
+                        return "Switched to new tab: " + window.location.href;
+                    }
+                    return "No new tab found: " + window.location.href;
+                })()
+                """
+            })
+            print(f"Tab switch result: {result}")
+            
+            # Print the current URL after attempting to switch tabs
             result = await session.call_tool("playwright_evaluate", arguments={
                 "script": "window.location.href"
             })
-            print(f"Current URL before inserting slide: {result}")
+            print(f"Current URL after tab switch attempt: {result}")
             
             # Take a screenshot to verify we're on the correct page
             result = await session.call_tool("playwright_screenshot", arguments={
-                "name": "before_insert_slide"
+                "name": "after_tab_switch"
             })
-            print("Screenshot taken of current page")
+            print("Screenshot taken after tab switch attempt")
             
             # Get text content to help debug
             result = await session.call_tool("playwright_get_text_content", arguments={})
