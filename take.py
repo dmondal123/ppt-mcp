@@ -71,6 +71,12 @@ async def test_sharepoint_login():
             #Adding a small delay to ensure the editor loads properly
             await asyncio.sleep(5)  # Increased delay to ensure editor fully loads
             
+            # Print the current URL before proceeding
+            result = await session.call_tool("playwright_evaluate", arguments={
+                "script": "window.location.href"
+            })
+            print(f"Current URL before inserting slide: {result[0].text}")
+            
             #Click on "Insert" tab in the ribbon
             try:
                 result = await session.call_tool("playwright_click_text", arguments={
