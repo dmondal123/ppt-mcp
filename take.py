@@ -160,31 +160,50 @@ async def test_sharepoint_login():
                     })
                     print(f"Switched to PowerPoint iframe: {result}")
                     
-                    # First click on the title element to activate it
-                    result = await session.call_tool("playwright_click", arguments={
-                        "selector": "span.NormalTextRun:has-text('Click to add title')"
+                    # Let's examine the structure of the slide elements
+                    result = await session.call_tool("playwright_evaluate", arguments={
+                        "script": """
+                        // Find all potentially editable elements
+                        const editableElements = Array.from(document.querySelectorAll('[contenteditable="true"], [role="textbox"], textarea, input:not([type="hidden"])'));
+                        
+                        // Return information about these elements
+                        return editableElements.map(el => ({
+                            tagName: el.tagName,
+                            id: el.id,
+                            className: el.className,
+                            contentEditable: el.contentEditable,
+                            role: el.getAttribute('role'),
+                            ariaReadOnly: el.getAttribute('aria-readonly'),
+                            text: el.textContent.substring(0, 50)
+                        }));
+                        """
                     })
-                    print(f"Click on title element: {result}")
+                    print(f"Editable elements on slide: {result}")
                     
-                    # Use keyboard typing to input text
-                    result = await session.call_tool("playwright_keyboard_type", arguments={
-                        "text": "PPT Agent"
+                    # Let's also try to find the slide container
+                    result = await session.call_tool("playwright_evaluate", arguments={
+                        "script": """
+                        // Find elements that might be slide containers
+                        const slideElements = Array.from(document.querySelectorAll('.Slide, [id*="Slide"], [class*="slide"]'));
+                        
+                        return slideElements.map(el => ({
+                            tagName: el.tagName,
+                            id: el.id,
+                            className: el.className,
+                            children: el.children.length
+                        }));
+                        """
                     })
-                    print(f"Type title text: {result}")
+                    print(f"Slide container elements: {result}")
                     
-                    # Click on the subtitle element
-                    result = await session.call_tool("playwright_click", arguments={
-                        "selector": "span.NormalTextRun:has-text('Click to add subtitle')"
+                    # Take a screenshot for reference
+                    result = await session.call_tool("playwright_screenshot", arguments={
+                        "name": "powerpoint_slide_structure"
                     })
-                    print(f"Click on subtitle element: {result}")
+                    print("Screenshot taken of slide structure")
                     
-                    # Type the subtitle text
-                    result = await session.call_tool("playwright_keyboard_type", arguments={
-                        "text": "Created by Automation"
-                    })
-                    print(f"Type subtitle text: {result}")
                 except Exception as e:
-                    print(f"Error with iframe operations: {e}")
+                    print(f"Error examining PowerPoint structure: {e}")
             
             except Exception as e:
                 print(f"Error during PowerPoint interaction: {e}")
