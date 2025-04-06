@@ -123,11 +123,35 @@ async def test_sharepoint_login():
                 })
                 print(f"Number of iframes on page: {result}")
                 
+                # Get iframe details (just IDs and names)
+                result = await session.call_tool("playwright_evaluate", arguments={
+                    "script": "Array.from(document.querySelectorAll('iframe')).map(iframe => ({id: iframe.id, name: iframe.name}))"
+                })
+                print(f"Iframe details: {result}")
+                
                 # Take a screenshot for reference
                 result = await session.call_tool("playwright_screenshot", arguments={
                     "name": "before_iframe_interaction"
                 })
                 print("Screenshot taken before iframe interaction")
+                
+                # Try to get HTML content of the page
+                result = await session.call_tool("playwright_get_html_content", arguments={
+                    "selector": "body"
+                })
+                print(f"Page body HTML (first 500 chars): {str(result)[:500]}...")
+                
+                # Try to get HTML content of each iframe
+                for i in range(int(str(result).split(":")[-1].strip()) if ":" in str(result) else 0):
+                    try:
+                        # Get HTML content of this iframe
+                        iframe_selector = f"iframe:nth-of-type({i+1})"
+                        result = await session.call_tool("playwright_get_html_content", arguments={
+                            "selector": iframe_selector
+                        })
+                        print(f"Iframe {i} HTML: {result}")
+                    except Exception as e:
+                        print(f"Error getting iframe {i} content: {e}")
                 
                 # Try to click on the "Insert" tab directly
                 result = await session.call_tool("playwright_click_text", arguments={
@@ -146,10 +170,6 @@ async def test_sharepoint_login():
                     "name": "after_new_slide_attempt"
                 })
                 print("Screenshot taken after new slide attempt")
-                
-                # Try to get text content to see what's available on the page
-                result = await session.call_tool("playwright_get_text_content", arguments={})
-                print(f"Page text content: {result}")
                 
             except Exception as e:
                 print(f"Error during PowerPoint interaction: {e}")
