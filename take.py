@@ -153,23 +153,18 @@ async def test_sharepoint_login():
                     except Exception as e:
                         print(f"Error getting iframe {i} content: {e}")
                 
-                # Try to click on the "Insert" tab directly
-                result = await session.call_tool("playwright_click_text", arguments={
-                    "text": "Insert"
+                # First switch to the PowerPoint iframe
+                result = await session.call_tool("playwright_frame", arguments={
+                    "name": "WacFrame_PowerPoint_0"
                 })
-                print(f"Click on Insert tab result: {result}")
+                print(f"Switched to PowerPoint iframe: {result}")
                 
-                # Try clicking on "New Slide" button
-                result = await session.call_tool("playwright_click_text", arguments={
-                    "text": "New Slide"
+                # Now try to add text to the slide (using the simpler selector since we're already in the iframe)
+                result = await session.call_tool("playwright_fill", arguments={
+                    "selector": "#SlideRootViewElement0 .NormalTextRun",
+                    "value": "PPT Agent"
                 })
-                print(f"Click on New Slide result: {result}")
-                
-                # Take a screenshot after attempting to add a new slide
-                result = await session.call_tool("playwright_screenshot", arguments={
-                    "name": "after_new_slide_attempt"
-                })
-                print("Screenshot taken after new slide attempt")
+                print(f"add title result: {result}")
                 
             except Exception as e:
                 print(f"Error during PowerPoint interaction: {e}")
