@@ -180,6 +180,17 @@ async def handle_list_tools() -> list[types.Tool]:
                 "required": []
             }
         ),
+        types.Tool(
+            name="playwright_wait_for_timeout",
+            description="Wait for a specified amount of time in milliseconds",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "timeout": {"type": "integer", "description": "Timeout in milliseconds"}
+                },
+                "required": ["timeout"]
+            }
+        ),
     ]
 
 import uuid
@@ -449,6 +460,18 @@ class FrameToolHandler(ToolHandler):
         except Exception as e:
             return [types.TextContent(type="text", text=f"Error switching to frame: {str(e)}")]
 
+class WaitForTimeoutToolHandler(ToolHandler):
+    async def handle(self, name: str, arguments: dict | None) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
+        if not self._sessions:
+            return [types.TextContent(type="text", text="No active session. Please create a new session first.")]
+        session_id = list(self._sessions.keys())[-1]
+        page = self._sessions[session_id]["page"]
+        
+        timeout = arguments.get("timeout", 1000)  # Default to 1 second if not specified
+        await page.wait_for_timeout(timeout)
+        
+        return [types.TextContent(type="text", text=f"Waited for {timeout} milliseconds")]
+
 tool_handlers = {
     "playwright_navigate": NavigateToolHandler(),
     "playwright_screenshot": ScreenshotToolHandler(),
@@ -462,6 +485,7 @@ tool_handlers = {
     "playwright_list_pages": ListPagesToolHandler(),
     "playwright_switch_to_page": SwitchToPageToolHandler(),
     "playwright_frame": FrameToolHandler(),
+    "playwright_wait_for_timeout": WaitForTimeoutToolHandler(),
 }
 
 

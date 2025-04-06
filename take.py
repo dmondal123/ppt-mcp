@@ -160,6 +160,12 @@ async def test_sharepoint_login():
                     })
                     print(f"Switched to PowerPoint iframe: {result}")
                     
+                    # Wait for the iframe content to fully load
+                    result = await session.call_tool("playwright_wait_for_timeout", arguments={
+                        "timeout": 3000  # Wait 3 seconds
+                    })
+                    print(f"Waited for iframe to load: {result}")
+                    
                     # Take a screenshot to see what we're working with
                     result = await session.call_tool("playwright_screenshot", arguments={
                         "name": "powerpoint_before_edit"
@@ -187,6 +193,12 @@ async def test_sharepoint_login():
                         "selector": "[contenteditable='true']:has-text('Click to add title')"
                     })
                     print(f"Click on title placeholder: {result}")
+                    
+                    # Wait a moment for the click to register
+                    result = await session.call_tool("playwright_wait_for_timeout", arguments={
+                        "timeout": 1000  # Wait 1 second
+                    })
+                    print(f"Waited after click: {result}")
                     
                     # Now try to type directly after clicking
                     result = await session.call_tool("playwright_evaluate", arguments={
