@@ -160,50 +160,57 @@ async def test_sharepoint_login():
                     })
                     print(f"Switched to PowerPoint iframe: {result}")
                     
-                    # Let's examine the structure of the slide elements
-                    result = await session.call_tool("playwright_evaluate", arguments={
-                        "script": """
-                        // Find all potentially editable elements
-                        const editableElements = Array.from(document.querySelectorAll('[contenteditable="true"], [role="textbox"], textarea, input:not([type="hidden"])'));
-                        
-                        // Return information about these elements
-                        return editableElements.map(el => ({
-                            tagName: el.tagName,
-                            id: el.id,
-                            className: el.className,
-                            contentEditable: el.contentEditable,
-                            role: el.getAttribute('role'),
-                            ariaReadOnly: el.getAttribute('aria-readonly'),
-                            text: el.textContent.substring(0, 50)
-                        }));
-                        """
-                    })
-                    print(f"Editable elements on slide: {result}")
-                    
-                    # Let's also try to find the slide container
-                    result = await session.call_tool("playwright_evaluate", arguments={
-                        "script": """
-                        // Find elements that might be slide containers
-                        const slideElements = Array.from(document.querySelectorAll('.Slide, [id*="Slide"], [class*="slide"]'));
-                        
-                        return slideElements.map(el => ({
-                            tagName: el.tagName,
-                            id: el.id,
-                            className: el.className,
-                            children: el.children.length
-                        }));
-                        """
-                    })
-                    print(f"Slide container elements: {result}")
-                    
-                    # Take a screenshot for reference
+                    # Take a screenshot to see what we're working with
                     result = await session.call_tool("playwright_screenshot", arguments={
-                        "name": "powerpoint_slide_structure"
+                        "name": "powerpoint_before_edit"
                     })
-                    print("Screenshot taken of slide structure")
+                    print("Screenshot taken before editing")
+                    
+                    # First, let's find all elements that might be editable
+                    result = await session.call_tool("playwright_evaluate", arguments={
+                        "script": """
+                        // Find all elements that might be editable
+                        const editableElements = Array.from(document.querySelectorAll('[contenteditable="true"]'));
+                        const elementsInfo = editableElements.map(el => ({
+                            tagName: el.tagName,
+                            id: el.id,
+                            className: el.className,
+                            text: el.textContent.substring(0, 100)
+                        }));
+                        elementsInfo;
+                        """
+                    })
+                    print(f"Editable elements: {result}")
+                    
+                    # Now try to click on the title placeholder
+                    result = await session.call_tool("playwright_click", arguments={
+                        "selector": "[contenteditable='true']:has-text('Click to add title')"
+                    })
+                    print(f"Click on title placeholder: {result}")
+                    
+                    # Now try to type directly after clicking
+                    result = await session.call_tool("playwright_evaluate", arguments={
+                        "script": """
+                        // Get the active element and set its text content
+                        const activeElement = document.activeElement;
+                        let status = "No editable element is active";
+                        if (activeElement && activeElement.isContentEditable) {
+                            activeElement.textContent = "PPT Agent";
+                            status = "Text set successfully";
+                        }
+                        status;
+                        """
+                    })
+                    print(f"Set title text: {result}")
+                    
+                    # Take a screenshot to see if it worked
+                    result = await session.call_tool("playwright_screenshot", arguments={
+                        "name": "powerpoint_after_edit"
+                    })
+                    print("Screenshot taken after editing")
                     
                 except Exception as e:
-                    print(f"Error examining PowerPoint structure: {e}")
+                    print(f"Error with iframe operations: {e}")
             
             except Exception as e:
                 print(f"Error during PowerPoint interaction: {e}")
