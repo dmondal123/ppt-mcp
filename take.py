@@ -160,12 +160,19 @@ async def test_sharepoint_login():
                     })
                     print(f"Switched to PowerPoint iframe: {result}")
                     
-                    # Now try to add text to the slide (using the simpler selector since we're already in the iframe)
+                    # Get the title element specifically by looking for "Click to add title" text
                     result = await session.call_tool("playwright_fill", arguments={
-                        "selector": "#SlideRootViewElement0 .NormalTextRun",
+                        "selector": "span.NormalTextRun:has-text('Click to add title')",
                         "value": "PPT Agent"
                     })
                     print(f"add title result: {result}")
+                    
+                    # Also add a subtitle
+                    result = await session.call_tool("playwright_fill", arguments={
+                        "selector": "span.NormalTextRun:has-text('Click to add subtitle')",
+                        "value": "Created by Automation"
+                    })
+                    print(f"add subtitle result: {result}")
                 except Exception as e:
                     print(f"Error with iframe operations: {e}")
             
