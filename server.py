@@ -180,6 +180,17 @@ async def handle_list_tools() -> list[types.Tool]:
                 "required": []
             }
         ),
+        types.Tool(
+            name="playwright_keyboard_type",
+            description="Type text using the keyboard",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string", "description": "Text to type"}
+                },
+                "required": ["text"]
+            }
+        ),
     ]
 
 import uuid
@@ -449,6 +460,21 @@ class FrameToolHandler(ToolHandler):
         except Exception as e:
             return [types.TextContent(type="text", text=f"Error switching to frame: {str(e)}")]
 
+class KeyboardTypeToolHandler(ToolHandler):
+    async def handle(self, name: str, arguments: dict | None) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
+        if not self._sessions:
+            return [types.TextContent(type="text", text="No active session. Please create a new session first.")]
+        session_id = list(self._sessions.keys())[-1]
+        page = self._sessions[session_id]["page"]
+        context = self._sessions[session_id].get("frame", page)
+        
+        try:
+            text = arguments.get("text")
+            await context.keyboard.type(text)
+            return [types.TextContent(type="text", text=f"Typed text: {text}")]
+        except Exception as e:
+            return [types.TextContent(type="text", text=f"Error typing text: {str(e)}")]
+
 tool_handlers = {
     "playwright_navigate": NavigateToolHandler(),
     "playwright_screenshot": ScreenshotToolHandler(),
@@ -462,6 +488,7 @@ tool_handlers = {
     "playwright_list_pages": ListPagesToolHandler(),
     "playwright_switch_to_page": SwitchToPageToolHandler(),
     "playwright_frame": FrameToolHandler(),
+    "playwright_keyboard_type": KeyboardTypeToolHandler(),
 }
 
 

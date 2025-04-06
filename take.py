@@ -160,19 +160,29 @@ async def test_sharepoint_login():
                     })
                     print(f"Switched to PowerPoint iframe: {result}")
                     
-                    # Get the title element specifically by looking for "Click to add title" text
-                    result = await session.call_tool("playwright_fill", arguments={
-                        "selector": "span.NormalTextRun:has-text('Click to add title')",
-                        "value": "PPT Agent"
+                    # First click on the title element to activate it
+                    result = await session.call_tool("playwright_click", arguments={
+                        "selector": "span.NormalTextRun:has-text('Click to add title')"
                     })
-                    print(f"add title result: {result}")
+                    print(f"Click on title element: {result}")
                     
-                    # Also add a subtitle
-                    result = await session.call_tool("playwright_fill", arguments={
-                        "selector": "span.NormalTextRun:has-text('Click to add subtitle')",
-                        "value": "Created by Automation"
+                    # Use keyboard typing to input text
+                    result = await session.call_tool("playwright_keyboard_type", arguments={
+                        "text": "PPT Agent"
                     })
-                    print(f"add subtitle result: {result}")
+                    print(f"Type title text: {result}")
+                    
+                    # Click on the subtitle element
+                    result = await session.call_tool("playwright_click", arguments={
+                        "selector": "span.NormalTextRun:has-text('Click to add subtitle')"
+                    })
+                    print(f"Click on subtitle element: {result}")
+                    
+                    # Type the subtitle text
+                    result = await session.call_tool("playwright_keyboard_type", arguments={
+                        "text": "Created by Automation"
+                    })
+                    print(f"Type subtitle text: {result}")
                 except Exception as e:
                     print(f"Error with iframe operations: {e}")
             
