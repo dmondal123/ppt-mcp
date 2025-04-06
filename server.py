@@ -303,10 +303,13 @@ class FillToolHandler(ToolHandler):
         # Use the current frame if set, otherwise use the page
         context = self._sessions[session_id].get("frame", page)
         
-        selector = arguments.get("selector")
-        value = arguments.get("value")
-        await context.locator(selector).fill(value)
-        return [types.TextContent(type="text", text=f"Filled element with selector {selector} with value {value}")]
+        try:
+            selector = arguments.get("selector")
+            value = arguments.get("value")
+            await context.locator(selector).fill(value)
+            return [types.TextContent(type="text", text=f"Filled element with selector {selector} with value {value}")]
+        except Exception as e:
+            return [types.TextContent(type="text", text=f"Error filling element: {str(e)}")]
 
 class EvaluateToolHandler(ToolHandler):
     async def handle(self, name: str, arguments: dict | None) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
@@ -423,25 +426,28 @@ class FrameToolHandler(ToolHandler):
         frame_name = arguments.get("name")
         selector = arguments.get("selector")
         
-        if frame_name:
-            frame = page.frame(name=frame_name)
-            if not frame:
-                return [types.TextContent(type="text", text=f"Frame with name '{frame_name}' not found")]
-            self._sessions[session_id]["frame"] = frame
-            return [types.TextContent(type="text", text=f"Switched to frame with name '{frame_name}'")]
-        elif selector:
-            frame_element = await page.locator(selector).first
-            if not frame_element:
-                return [types.TextContent(type="text", text=f"Frame with selector '{selector}' not found")]
-            frame = await frame_element.content_frame()
-            if not frame:
-                return [types.TextContent(type="text", text=f"Could not access content frame for selector '{selector}'")]
-            self._sessions[session_id]["frame"] = frame
-            return [types.TextContent(type="text", text=f"Switched to frame with selector '{selector}'")]
-        else:
-            # Reset to main frame
-            self._sessions[session_id]["frame"] = page.main_frame
-            return [types.TextContent(type="text", text="Reset to main frame")]
+        try:
+            if frame_name:
+                frame = page.frame(name=frame_name)
+                if not frame:
+                    return [types.TextContent(type="text", text=f"Frame with name '{frame_name}' not found")]
+                self._sessions[session_id]["frame"] = frame
+                return [types.TextContent(type="text", text=f"Switched to frame with name '{frame_name}'")]
+            elif selector:
+                frame_element = page.locator(selector).first
+                if not frame_element:
+                    return [types.TextContent(type="text", text=f"Frame with selector '{selector}' not found")]
+                frame = frame_element.content_frame()
+                if not frame:
+                    return [types.TextContent(type="text", text=f"Could not access content frame for selector '{selector}'")]
+                self._sessions[session_id]["frame"] = frame
+                return [types.TextContent(type="text", text=f"Switched to frame with selector '{selector}'")]
+            else:
+                # Reset to main frame
+                self._sessions[session_id]["frame"] = page.main_frame
+                return [types.TextContent(type="text", text="Reset to main frame")]
+        except Exception as e:
+            return [types.TextContent(type="text", text=f"Error switching to frame: {str(e)}")]
 
 tool_handlers = {
     "playwright_navigate": NavigateToolHandler(),

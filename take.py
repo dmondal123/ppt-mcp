@@ -142,7 +142,7 @@ async def test_sharepoint_login():
                 print(f"Page body HTML (first 500 chars): {str(result)[:500]}...")
                 
                 # Try to get HTML content of each iframe
-                for i in range(int(str(result).split(":")[-1].strip()) if ":" in str(result) else 0):
+                for i in range(int(str(result).split(":")[-1].strip()) if ":" in str(result) and str(result).split(":")[-1].strip().isdigit() else 0):
                     try:
                         # Get HTML content of this iframe
                         iframe_selector = f"iframe:nth-of-type({i+1})"
@@ -154,18 +154,21 @@ async def test_sharepoint_login():
                         print(f"Error getting iframe {i} content: {e}")
                 
                 # First switch to the PowerPoint iframe
-                result = await session.call_tool("playwright_frame", arguments={
-                    "name": "WacFrame_PowerPoint_0"
-                })
-                print(f"Switched to PowerPoint iframe: {result}")
-                
-                # Now try to add text to the slide (using the simpler selector since we're already in the iframe)
-                result = await session.call_tool("playwright_fill", arguments={
-                    "selector": "#SlideRootViewElement0 .NormalTextRun",
-                    "value": "PPT Agent"
-                })
-                print(f"add title result: {result}")
-                
+                try:
+                    result = await session.call_tool("playwright_frame", arguments={
+                        "name": "WacFrame_PowerPoint_0"
+                    })
+                    print(f"Switched to PowerPoint iframe: {result}")
+                    
+                    # Now try to add text to the slide (using the simpler selector since we're already in the iframe)
+                    result = await session.call_tool("playwright_fill", arguments={
+                        "selector": "#SlideRootViewElement0 .NormalTextRun",
+                        "value": "PPT Agent"
+                    })
+                    print(f"add title result: {result}")
+                except Exception as e:
+                    print(f"Error with iframe operations: {e}")
+            
             except Exception as e:
                 print(f"Error during PowerPoint interaction: {e}")
             
