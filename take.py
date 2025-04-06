@@ -117,37 +117,46 @@ async def test_sharepoint_login():
             
             # Now try to click on "Insert" tab in the ribbon
             try:
+                # First, let's identify all iframes on the page
+                result = await session.call_tool("playwright_evaluate", arguments={
+                    "script": "document.querySelectorAll('iframe').length"
+                })
+                print(f"Number of iframes on page: {result}")
+                
+                # Take a screenshot for reference
+                result = await session.call_tool("playwright_screenshot", arguments={
+                    "name": "before_iframe_interaction"
+                })
+                print("Screenshot taken before iframe interaction")
+                
+                # Try to click on the "Insert" tab directly
                 result = await session.call_tool("playwright_click_text", arguments={
                     "text": "Insert"
                 })
                 print(f"Click on Insert tab result: {result}")
                 
-                #Click on "New Slide" button
+                # Try clicking on "New Slide" button
                 result = await session.call_tool("playwright_click_text", arguments={
                     "text": "New Slide"
                 })
-                print("Click on New Slide result:", result.text if hasattr(result, 'text') else result)
+                print(f"Click on New Slide result: {result}")
                 
-                #Take a screenshot after adding new slide
+                # Take a screenshot after attempting to add a new slide
                 result = await session.call_tool("playwright_screenshot", arguments={
-                    "name": "new_slide_added"
+                    "name": "after_new_slide_attempt"
                 })
-                print("New slide screenshot taken")
-            except Exception as e:
-                print("Error adding new slide:", e)
-            
-            #Try to click on "Click to add title" text first
-            try:
-                result = await session.call_tool("playwright_fill", arguments={
-                "selector": "span.NormalTextRun",
-                "value": "ppt agent"
-                })
-                print("Click to add title:", result.text if hasattr(result, 'text') else result)
-            except Exception as e:
-                print("Error clicking title placeholder:", e)
+                print("Screenshot taken after new slide attempt")
                 
+                # Try to get text content to see what's available on the page
+                result = await session.call_tool("playwright_get_text_content", arguments={})
+                print(f"Page text content: {result}")
+                
+            except Exception as e:
+                print(f"Error during PowerPoint interaction: {e}")
+            
             #Take a final screenshot
-            result = await session.call_tool("playwright_screenshot", arguments={ "name": "powerpoint_final"
+            result = await session.call_tool("playwright_screenshot", arguments={
+                "name": "powerpoint_final"
             })
             print("Final screenshot taken")
 
