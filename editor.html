@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Name Editor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .editor-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        input[type="text"]:focus {
+            border-color: #4a90e2;
+            outline: none;
+        }
+        .name-display {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f0f7ff;
+            border-radius: 4px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="editor-container">
+        <label for="nameInput">Your Name:</label>
+        <input type="text" id="nameInput" placeholder="Enter your name here" value="John Doe">
+        
+        <div class="name-display">
+            Hello, <span id="nameDisplay">John Doe</span>!
+        </div>
+    </div>
+
+    <script>
+        // Update the display when the input changes
+        const nameInput = document.getElementById('nameInput');
+        const nameDisplay = document.getElementById('nameDisplay');
+        
+        nameInput.addEventListener('input', function() {
+            nameDisplay.textContent = this.value || 'Anonymous';
+        });
+    </script>
+</body>
+</html> 

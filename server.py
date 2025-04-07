@@ -291,7 +291,7 @@ class ScreenshotToolHandler(ToolHandler):
             await page.screenshot(path=f"{name}.png", full_page=True)
         with open(f"{name}.png", "rb") as image_file:
             encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
-        os.remove(f"{name}.png")
+        #os.remove(f"{name}.png")
         return [types.ImageContent(type="image", data=encoded_string, mimeType="image/png")]
 
 class ClickToolHandler(ToolHandler):
