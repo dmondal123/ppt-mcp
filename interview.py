@@ -81,13 +81,19 @@ async def run_interview():
             result = await session.call_tool("playwright_get_text_content", arguments={})
             print("Meeting details:", result.text(result))
             
-            # Step 10: Use JavaScript to find and extract the URL
+            # Step 10: Use JavaScript to find and extract the URL from the element with ID "OWA78038"
             print("Extracting wiki URL from meeting details...")
             result = await session.call_tool("playwright_evaluate", arguments={
                 "script": """
-                    // Find all links in the meeting body
-                    const links = Array.from(document.querySelectorAll('a[href*="wiki"]'));
-                    return links.length > 0 ? links[0].href : null;
+                    // Find the element with ID "OWA78038"
+                    const element = document.getElementById('OWA78038');
+                    if (element && element.href) {
+                        return element.href;
+                    } else {
+                        // Fallback: Find all links in the meeting body
+                        const links = Array.from(document.querySelectorAll('a[href*="wiki"]'));
+                        return links.length > 0 ? links[0].href : null;
+                    }
                 """
             })
             
