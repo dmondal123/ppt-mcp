@@ -1,6 +1,7 @@
 import asyncio
 from mcp import ClientSession, StdioServerParameters, types
 from mcp.client.stdio import stdio_client
+import re
 
 # Create server parameters for stdio connection to your server.py
 server_params = StdioServerParameters(
@@ -81,24 +82,40 @@ async def run_interview():
             result = await session.call_tool("playwright_get_text_content", arguments={})
             print("Meeting details:", result.text(result))
             
-            # Step 10: Use JavaScript to find and extract the URL from the element with ID "OWA78038"
+            # Step 10: Use JavaScript to find and extract the URL from the span element
             print("Extracting wiki URL from meeting details...")
             result = await session.call_tool("playwright_evaluate", arguments={
                 "script": """
-                    // Find the element with ID "OWA78038"
-                    const element = document.getElementById('OWA78038');
-                    if (element && element.href) {
-                        return element.href;
-                    } else {
-                        // Fallback: Find all links in the meeting body
-                        const links = Array.from(document.querySelectorAll('a[href*="wiki"]'));
-                        return links.length > 0 ? links[0].href : null;
+                    // Try to find the element using the specific selector
+                    const element = document.querySelector("div:nth-of-type(8) div.VSXvP span");
+                    if (element && element.textContent) {
+                        // Extract URL from the span's text content
+                        const text = element.textContent.trim();
+                        // Check if it looks like a URL
+                        if (text.startsWith('http') || text.includes('wiki')) {
+                            return text;
+                        }
                     }
                 """
             })
             
-            wiki_url = result.text(result)
-            if not wiki_url or "null" in wiki_url:
+            # Extract just the URL from the result
+            result_str = str(result)
+            wiki_url = None
+            
+            # Look for a URL pattern in the result string
+            url_match = re.search(r'https?://[^\s\'"]+', result_str)
+            if url_match:
+                wiki_url = url_match.group(0)
+            else:
+                # If regex fails, try a simpler approach
+                parts = result_str.split('result = ')
+                if len(parts) > 1:
+                    wiki_url = parts[1].split(',')[0].strip().rstrip("'").rstrip('"')
+                else:
+                    wiki_url = result_str
+            
+            if not wiki_url or wiki_url == "null":
                 print("No wiki URL found in the meeting details")
                 return
             
