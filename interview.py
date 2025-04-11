@@ -148,38 +148,73 @@ async def run_interview():
                     "timeout": 5000
                 })
             
-            # Step 14: Look for resume.txt file and download it
+            # Step 14: Look for resume.txt file and download it by getting the href and navigating to it
             print("Looking for resume.txt file...")
             await session.call_tool("playwright_screenshot", arguments={
                 "name": "wiki_loaded"
             })
             print("Screenshot taken")
             
-            # Try to find and click on the resume.txt link
+            # Extract the href from the selector and navigate to it
+            print("Extracting download link from selector 'span:nth-of-type(4) > a'...")
             try:
-                result = await session.call_tool("playwright_click_text", arguments={
-                    "text": "resume.txt"
-                })
-                print("Found and clicked resume.txt link!")
-            except Exception as e:
-                print(f"Error finding resume.txt: {e}")
-                
-                # Alternative approach: try to find by evaluating JavaScript
+                # First get the href attribute from the selector
                 result = await session.call_tool("playwright_evaluate", arguments={
                     "script": """
-                        // Find links that contain resume.txt
-                        const links = Array.from(document.querySelectorAll('a')).filter(a => 
-                            a.textContent.includes('resume.txt') || 
-                            a.href.includes('resume.txt')
-                        );
-                        if (links.length > 0) {
-                            links[0].click();
-                            return "Clicked resume.txt link via JavaScript";
+                        const link = document.querySelector("span:nth-of-type(4) > a");
+                        if (link && link.href) {
+                            return link.href;
                         }
-                        return "No resume.txt link found";
+                        return null;
                     """
                 })
-                print(result.text(result))
+                
+                download_url = str(result)
+                if download_url and download_url != "null":
+                    # Extract the URL using regex
+                    import re
+                    url_match = re.search(r'https?://[^\s\'"]+', download_url)
+                    if url_match:
+                        download_url = url_match.group(0)
+                    
+                    print(f"Found download URL: {download_url}")
+                    
+                    # Navigate directly to the download URL
+                    print(f"Navigating to download URL: {download_url}")
+                    result = await session.call_tool("playwright_navigate", arguments={
+                        "url": download_url
+                    })
+                    print("Download initiated!")
+                else:
+                    print("Could not extract download URL from the selector")
+                    
+                    # Fallback: Try clicking the link directly
+                    print("Trying to click the download link directly...")
+                    result = await session.call_tool("playwright_click", arguments={
+                        "selector": "span:nth-of-type(4) > a"
+                    })
+                    print("Clicked on download link")
+                    
+            except Exception as e:
+                print(f"Error extracting or navigating to download URL: {e}")
+                
+                # Fallback: Try with JavaScript
+                print("Trying to download using JavaScript...")
+                result = await session.call_tool("playwright_evaluate", arguments={
+                    "script": """
+                        const link = document.querySelector("span:nth-of-type(4) > a");
+                        if (link && link.href) {
+                            // Create a temporary anchor and trigger download
+                            const tempLink = document.createElement('a');
+                            tempLink.href = link.href;
+                            tempLink.setAttribute('download', 'resume.txt');
+                            tempLink.click();
+                            return "Download initiated via JavaScript";
+                        }
+                        return "Could not find download link";
+                    """
+                })
+                print(result)
             
             # Step 15: Wait for download to complete
             print("Waiting for download to complete...")
