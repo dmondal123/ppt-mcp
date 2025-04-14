@@ -191,6 +191,18 @@ async def handle_list_tools() -> list[types.Tool]:
                 "required": ["timeout"]
             }
         ),
+        types.Tool(
+            name="playwright_download_file",
+            description="Download a file by clicking on a link and save it to a specific path",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "selector": {"type": "string", "description": "CSS selector for the download link"},
+                    "save_path": {"type": "string", "description": "Path where to save the downloaded file"}
+                },
+                "required": ["selector"]
+            }
+        ),
     ]
 
 import uuid
@@ -472,6 +484,32 @@ class WaitForTimeoutToolHandler(ToolHandler):
         
         return [types.TextContent(type="text", text=f"Waited for {timeout} milliseconds")]
 
+class DownloadFileToolHandler(ToolHandler):
+    async def handle(self, name: str, arguments: dict | None) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
+        if not self._sessions:
+            return [types.TextContent(type="text", text="No active session. Please create a new session first.")]
+        
+        session_id = list(self._sessions.keys())[-1]
+        page = self._sessions[session_id]["page"]
+        selector = arguments.get("selector")
+        save_path = arguments.get("save_path", "./downloaded_file")
+        
+        try:
+            # Create a wait_for_download future
+            async with page.expect_download() as download_info:
+                # Click the download link
+                await page.locator(selector).click()
+            
+            # Wait for the download to complete
+            download = await download_info.value
+            
+            # Save the downloaded file
+            await download.save_as(save_path)
+            
+            return [types.TextContent(type="text", text=f"File downloaded successfully and saved to {save_path}")]
+        except Exception as e:
+            return [types.TextContent(type="text", text=f"Error downloading file: {str(e)}")]
+
 tool_handlers = {
     "playwright_navigate": NavigateToolHandler(),
     "playwright_screenshot": ScreenshotToolHandler(),
@@ -486,6 +524,7 @@ tool_handlers = {
     "playwright_switch_to_page": SwitchToPageToolHandler(),
     "playwright_frame": FrameToolHandler(),
     "playwright_wait_for_timeout": WaitForTimeoutToolHandler(),
+    "playwright_download_file": DownloadFileToolHandler(),
 }
 
 

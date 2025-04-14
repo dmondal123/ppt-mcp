@@ -148,79 +148,38 @@ async def run_interview():
                     "timeout": 5000
                 })
             
-            # Step 14: Look for resume.txt file and download it by getting the href and navigating to it
+            # Step 14: Look for resume.txt file and download it using the dedicated download tool
             print("Looking for resume.txt file...")
             await session.call_tool("playwright_screenshot", arguments={
                 "name": "wiki_loaded"
             })
             print("Screenshot taken")
             
-            # Extract the href from the selector and navigate to it
-            print("Extracting download link from selector 'span:nth-of-type(4) > a'...")
+            # Use the dedicated download tool to handle the file download
+            print("Downloading resume.txt file...")
             try:
-                # First get the href attribute from the selector
-                result = await session.call_tool("playwright_evaluate", arguments={
-                    "script": """
-                        const link = document.querySelector("span:nth-of-type(4) > a");
-                        if (link && link.href) {
-                            return link.href;
-                        }
-                        return null;
-                    """
+                result = await session.call_tool("playwright_download_file", arguments={
+                    "selector": "span:nth-of-type(4) > a",
+                    "save_path": "./resume.txt"
                 })
+                print(result)
+            except Exception as e:
+                print(f"Error downloading file: {e}")
                 
-                download_url = str(result)
-                if download_url and download_url != "null":
-                    # Extract the URL using regex
-                    import re
-                    url_match = re.search(r'https?://[^\s\'"]+', download_url)
-                    if url_match:
-                        download_url = url_match.group(0)
-                    
-                    print(f"Found download URL: {download_url}")
-                    
-                    # Navigate directly to the download URL
-                    print(f"Navigating to download URL: {download_url}")
-                    result = await session.call_tool("playwright_navigate", arguments={
-                        "url": download_url
-                    })
-                    print("Download initiated!")
-                else:
-                    print("Could not extract download URL from the selector")
-                    
-                    # Fallback: Try clicking the link directly
-                    print("Trying to click the download link directly...")
+                # Fallback: Try regular click
+                print("Trying fallback method...")
+                try:
                     result = await session.call_tool("playwright_click", arguments={
                         "selector": "span:nth-of-type(4) > a"
                     })
-                    print("Clicked on download link")
+                    print("Clicked download link. Check downloads folder for the file.")
                     
-            except Exception as e:
-                print(f"Error extracting or navigating to download URL: {e}")
-                
-                # Fallback: Try with JavaScript
-                print("Trying to download using JavaScript...")
-                result = await session.call_tool("playwright_evaluate", arguments={
-                    "script": """
-                        const link = document.querySelector("span:nth-of-type(4) > a");
-                        if (link && link.href) {
-                            // Create a temporary anchor and trigger download
-                            const tempLink = document.createElement('a');
-                            tempLink.href = link.href;
-                            tempLink.setAttribute('download', 'resume.txt');
-                            tempLink.click();
-                            return "Download initiated via JavaScript";
-                        }
-                        return "Could not find download link";
-                    """
-                })
-                print(result)
-            
-            # Step 15: Wait for download to complete
-            print("Waiting for download to complete...")
-            await session.call_tool("playwright_wait_for_timeout", arguments={
-                "timeout": 5000
-            })
+                    # Wait for download to complete
+                    await session.call_tool("playwright_wait_for_timeout", arguments={
+                        "timeout": 10000
+                    })
+                except Exception as e2:
+                    print(f"Error with fallback method: {e2}")
             
             print("Interview process completed!")
             print("Check your downloads folder for resume.txt")
