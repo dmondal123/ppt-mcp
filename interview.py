@@ -1,7 +1,10 @@
 import asyncio
+import os
 from mcp import ClientSession, StdioServerParameters, types
 from mcp.client.stdio import stdio_client
 import re
+import openai
+import json
 
 # Create server parameters for stdio connection to your server.py
 server_params = StdioServerParameters(
@@ -9,6 +12,72 @@ server_params = StdioServerParameters(
     args=["server.py"],  # Your server script
     env=None,  # Optional environment variables
 )
+
+# Set your OpenAI API key
+openai.api_key = "your_openai_api_key_here"  # Replace with your actual API key
+
+async def analyze_resume_with_gpt(resume_content):
+    """
+    Use GPT to analyze the resume content, extract top skills, and generate interview questions.
+    """
+    try:
+        # Create a prompt for GPT
+        prompt = f"""
+        I have a resume text below. Please:
+        1. Identify the top 3 technical or professional skills mentioned in the resume
+        2. For each skill, generate 2 interview questions that would help assess the candidate's proficiency
+        
+        Resume:
+        {resume_content}
+        
+        Format your response as JSON with the following structure:
+        {{
+            "skills": ["skill1", "skill2", "skill3"],
+            "questions": {{
+                "skill1": ["question1", "question2"],
+                "skill2": ["question1", "question2"],
+                "skill3": ["question1", "question2"]
+            }}
+        }}
+        """
+        
+        # Call the OpenAI API
+        response = await openai.ChatCompletion.acreate(
+            model="gpt-4",  # or another appropriate model
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that analyzes resumes and generates interview questions."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=1000
+        )
+        
+        # Extract and parse the response
+        result = response.choices[0].message.content.strip()
+        
+        # Try to parse the JSON response
+        try:
+            json_result = json.loads(result)
+            return json_result
+        except json.JSONDecodeError:
+            # If JSON parsing fails, extract information using regex
+            skills_match = re.search(r'"skills":\s*\[(.*?)\]', result, re.DOTALL)
+            skills = []
+            if skills_match:
+                skills_str = skills_match.group(1)
+                skills = [s.strip(' "\'') for s in skills_str.split(',')]
+            
+            return {
+                "skills": skills,
+                "questions": {}
+            }
+            
+    except Exception as e:
+        print(f"Error analyzing resume with GPT: {e}")
+        return {
+            "skills": [],
+            "questions": {}
+        }
 
 async def run_interview():
     async with stdio_client(server_params) as (read, write):
@@ -21,7 +90,7 @@ async def run_interview():
             result = await session.call_tool("playwright_navigate", arguments={
                 "url": "outlook.office.com/calendar/view/workweek"
             })
-            print("Navigation result:", result.text(result))
+            print("Navigation result:", result)
             
             # Step 2: Wait for login page to load
             print("Waiting for login page to load...")
@@ -37,7 +106,7 @@ async def run_interview():
             
             # Step 4: Get text content to see what's on the page
             result = await session.call_tool("playwright_get_text_content", arguments={})
-            print("Page content:", result.text(result))
+            print("Page content:", result)
             
             # Step 5: Prompt user to complete the login manually
             print("\n*** MANUAL ACTION REQUIRED ***")
@@ -80,7 +149,7 @@ async def run_interview():
             
             # Step 9: Extract text to find the wiki URL
             result = await session.call_tool("playwright_get_text_content", arguments={})
-            print("Meeting details:", result.text(result))
+            print("Meeting details:", result)
             
             # Step 10: Use JavaScript to find and extract the URL from the span element
             print("Extracting wiki URL from meeting details...")
@@ -138,7 +207,7 @@ async def run_interview():
             
             # Step 13: Check if we need to login again
             result = await session.call_tool("playwright_get_text_content", arguments={})
-            result_text = result.text(result)
+            result_text = str(result)
             if "login" in result_text.lower() or "sign in" in result_text.lower():
                 print("\n*** MANUAL ACTION REQUIRED ***")
                 print("Please complete the SSO login for the wiki page.")
@@ -156,11 +225,12 @@ async def run_interview():
             print("Screenshot taken")
             
             # Use the dedicated download tool to handle the file download
+            resume_path = "./resume.txt"
             print("Downloading resume.txt file...")
             try:
                 result = await session.call_tool("playwright_download_file", arguments={
                     "selector": "span:nth-of-type(4) > a",
-                    "save_path": "./resume.txt"
+                    "save_path": resume_path
                 })
                 print(result)
             except Exception as e:
@@ -181,8 +251,47 @@ async def run_interview():
                 except Exception as e2:
                     print(f"Error with fallback method: {e2}")
             
-            print("Interview process completed!")
-            print("Check your downloads folder for resume.txt")
+            # Step 15: Read and analyze the resume with GPT
+            print("\n--- RESUME ANALYSIS WITH GPT ---")
+            
+            # Check if the resume file exists
+            if os.path.exists(resume_path):
+                print(f"Resume file found at {resume_path}")
+                
+                # Read the resume content
+                with open(resume_path, 'r', encoding='utf-8') as file:
+                    resume_content = file.read()
+                
+                print(f"Resume content (first 200 chars): {resume_content[:200]}...")
+                
+                # Analyze the resume with GPT
+                print("\nAnalyzing resume with GPT...")
+                analysis = await analyze_resume_with_gpt(resume_content)
+                
+                # Display the results
+                if analysis and "skills" in analysis and analysis["skills"]:
+                    print(f"\nTop skills identified by GPT: {', '.join(analysis['skills'])}")
+                    
+                    print("\n--- SUGGESTED INTERVIEW QUESTIONS ---")
+                    
+                    # Display questions for each skill
+                    if "questions" in analysis:
+                        for skill, questions in analysis["questions"].items():
+                            print(f"\nQuestions for {skill}:")
+                            for i, question in enumerate(questions, 1):
+                                print(f"{i}. {question}")
+                    else:
+                        # Generate generic questions if GPT didn't provide specific ones
+                        for skill in analysis["skills"]:
+                            print(f"\nQuestions for {skill}:")
+                            print(f"1. Can you describe your experience with {skill}?")
+                            print(f"2. What challenges have you faced when working with {skill}?")
+                else:
+                    print("No specific skills were identified in the resume by GPT.")
+            else:
+                print(f"Resume file not found at {resume_path}. Check your downloads folder.")
+            
+            print("\nInterview process completed!")
 
 if __name__ == "__main__":
     asyncio.run(run_interview())
