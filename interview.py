@@ -3,7 +3,7 @@ import os
 from mcp import ClientSession, StdioServerParameters, types
 from mcp.client.stdio import stdio_client
 import re
-import openai
+from openai import OpenAI
 import json
 
 # Create server parameters for stdio connection to your server.py
@@ -12,9 +12,6 @@ server_params = StdioServerParameters(
     args=["server.py"],  # Your server script
     env=None,  # Optional environment variables
 )
-
-# Set your OpenAI API key
-openai.api_key = "your_openai_api_key_here"  # Replace with your actual API key
 
 async def analyze_resume_with_gpt(resume_content):
     """
@@ -40,9 +37,9 @@ async def analyze_resume_with_gpt(resume_content):
             }}
         }}
         """
-        
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         # Call the OpenAI API
-        response = await openai.ChatCompletion.acreate(
+        response = await client.chat.completions.create(
             model="gpt-4",  # or another appropriate model
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that analyzes resumes and generates interview questions."},
